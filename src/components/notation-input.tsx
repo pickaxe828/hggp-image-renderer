@@ -42,7 +42,7 @@ export function NotationInput({ onParsed }: NotationInputProps) {
         aria-label="Notation text"
         value={text}
         onChange={(event) => setText(event.target.value)}
-        className="min-h-32 rounded-lg border border-input bg-background p-2 text-sm"
+        className="min-h-32 rounded-lg border border-input bg-background p-2 font-mono text-sm"
       />
       <input
         type="file"

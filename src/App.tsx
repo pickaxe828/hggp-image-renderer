@@ -6,6 +6,7 @@ import { useStoredMapping } from '@/lib/mapping/use-stored-mapping'
 import type { Mapping } from '@/lib/mapping/types'
 import type { Document } from '@/lib/notation'
 import { buildScenes } from '@/lib/render/build-scene'
+import { stackScenesVertically } from '@/lib/render/stack-scenes'
 import type { PlacedScene } from '@/lib/render/types'
 import { loadMojangAssets } from '@/lib/assets/mojang-assets'
 
@@ -50,8 +51,10 @@ function App() {
   }, [notationDocument])
 
   // A document can name more than one top-level build; `buildScenes` returns
-  // one entry per scene, in document order, and the canvas renders all of
-  // them stacked top to bottom.
+  // one entry per scene, in document order. `stackScenesVertically` merges
+  // them into a single block list -- stacked top to bottom with a
+  // 16-block air gap between each -- so they all render in one shared
+  // canvas/scene instead of one viewer per scene.
   const result = useMemo((): { scenes: PlacedScene[]; error: null } | { scenes: null; error: string } => {
     if (!notationDocument) return { scenes: null, error: '' }
     try {
@@ -63,6 +66,7 @@ function App() {
 
   const scenes = result.scenes
   const sceneError = result.error || null
+  const stackedBlocks = useMemo(() => (scenes ? stackScenesVertically(scenes) : null), [scenes])
 
   return (
     <div className="flex h-screen flex-col bg-background text-foreground">
@@ -101,18 +105,16 @@ function App() {
               </p>
             )}
 
-            {scenes && (
-              <div className="flex flex-col gap-6">
-                {scenes.map((scene) => (
-                  <section key={scene.name} className="flex flex-col gap-2">
-                    <h2 className="font-mono text-sm text-muted-foreground">/{scene.name}/</h2>
-                    <Suspense
-                      fallback={<p className="text-sm text-muted-foreground">Loading 3D viewer…</p>}
-                    >
-                      <SceneViewer blocks={scene.blocks} assets={assets} />
-                    </Suspense>
-                  </section>
-                ))}
+            {scenes && stackedBlocks && (
+              <div className="flex h-full flex-col gap-2">
+                {scenes.length > 1 && (
+                  <p className="font-mono text-sm text-muted-foreground">
+                    {scenes.map((scene) => `/${scene.name}/`).join('  ·  ')}
+                  </p>
+                )}
+                <Suspense fallback={<p className="text-sm text-muted-foreground">Loading 3D viewer…</p>}>
+                  <SceneViewer blocks={stackedBlocks} assets={assets} />
+                </Suspense>
               </div>
             )}
           </div>

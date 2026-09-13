@@ -53,7 +53,7 @@ export function ImportMapping({ onImport }: ImportMappingProps) {
         aria-label="Mapping JSON"
         value={text}
         onChange={(event) => setText(event.target.value)}
-        className="min-h-32 rounded-lg border border-input bg-background p-2 text-sm"
+        className="min-h-32 rounded-lg border border-input bg-background p-2 font-mono text-sm"
       />
       <input
         type="file"
