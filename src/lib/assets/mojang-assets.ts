@@ -92,17 +92,17 @@ async function fetchVersionDetail(entry: VersionManifestEntry): Promise<VersionD
   try {
     response = await fetch(entry.url)
   } catch (cause) {
-    throw new Error(`Failed to fetch Minecraft version manifest for version ${entry.id}: ${errorMessage(cause)}`)
+    throw new Error(`Failed to fetch Minecraft version detail for version ${entry.id}: ${errorMessage(cause)}`)
   }
   if (!response.ok) {
     throw new Error(
-      `Failed to fetch Minecraft version manifest for version ${entry.id}: ${response.status} ${response.statusText}`,
+      `Failed to fetch Minecraft version detail for version ${entry.id}: ${response.status} ${response.statusText}`,
     )
   }
   try {
     return (await response.json()) as VersionDetail
   } catch (cause) {
-    throw new Error(`Failed to fetch Minecraft version manifest for version ${entry.id}: ${errorMessage(cause)}`)
+    throw new Error(`Failed to fetch Minecraft version detail for version ${entry.id}: ${errorMessage(cause)}`)
   }
 }
 
