@@ -20,7 +20,7 @@ configure({ THREE })
 const PLACEHOLDER_BLOCK_ID = 'barrier'
 
 export interface SceneViewerProps {
-  blocks: PlacedBlock[]
+  blocks: readonly PlacedBlock[]
   /** The client-jar bytes from `loadMojangAssets`, or `null` while still loading. */
   assets: ArrayBuffer | null
 }

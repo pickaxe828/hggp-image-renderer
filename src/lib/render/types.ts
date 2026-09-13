@@ -19,3 +19,12 @@ export interface PlacedBlock {
   readonly blockId: string;
   readonly pos: readonly [number, number, number];
 }
+
+/** One renderable build within a document: an `identify` statement's
+ * element name plus its resolved blocks. A document can name more than one
+ * of these -- see `buildScenes` in build-scene.ts -- and the app renders
+ * each as its own scene, in document order. */
+export interface PlacedScene {
+  readonly name: string;
+  readonly blocks: readonly PlacedBlock[];
+}

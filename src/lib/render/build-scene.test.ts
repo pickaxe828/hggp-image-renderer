@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { parseDocument } from "@/lib/notation";
 import type { Mapping } from "@/lib/mapping/types";
 import { UNRESOLVED_BLOCK } from "@/lib/mapping/resolve";
-import { buildScene, NoRenderableModelError } from "./build-scene.ts";
+import { buildScenes, NoRenderableModelError } from "./build-scene.ts";
 
 const mapping: Mapping = {
   version: 1,
@@ -12,7 +12,7 @@ const mapping: Mapping = {
   },
 };
 
-describe("buildScene", () => {
+describe("buildScenes", () => {
   it("renders the CLAUDE.md reference example end to end, resolving blocks per cell", () => {
     const doc = parseDocument(`
 ---
@@ -27,7 +27,10 @@ describe("buildScene", () => {
 ]]:=/C/;
 `);
 
-    const placed = buildScene(doc, mapping);
+    const scenes = buildScenes(doc, mapping);
+    expect(scenes).toHaveLength(1);
+    const [{ name, blocks: placed }] = scenes;
+    expect(name).toBe("C");
 
     // Row 0 of text ("......@@....") is 6 cells: 5 "." cells (each an
     // 8x8 tile of $_) and one "@@" cell -- a dangling forward reference
@@ -47,34 +50,55 @@ describe("buildScene", () => {
 
   it("resolves an unmapped word to the placeholder sentinel instead of throwing", () => {
     const doc = parseDocument(`[[ [$unknown-word] ]]:=/X/;`);
-    const placed = buildScene(doc, mapping);
-    expect(placed).toEqual([{ blockId: UNRESOLVED_BLOCK, pos: [0, 0, 0] }]);
+    const scenes = buildScenes(doc, mapping);
+    expect(scenes).toEqual([{ name: "X", blocks: [{ blockId: UNRESOLVED_BLOCK, pos: [0, 0, 0] }] }]);
   });
 
   it("resolves every block to the placeholder sentinel when no mapping is loaded", () => {
     const doc = parseDocument(`[[ [$_] ]]:=/X/;`);
-    expect(buildScene(doc, null)).toEqual([{ blockId: UNRESOLVED_BLOCK, pos: [0, 0, 0] }]);
-    expect(buildScene(doc, undefined)).toEqual([{ blockId: UNRESOLVED_BLOCK, pos: [0, 0, 0] }]);
+    expect(buildScenes(doc, null)).toEqual([{ name: "X", blocks: [{ blockId: UNRESOLVED_BLOCK, pos: [0, 0, 0] }] }]);
+    expect(buildScenes(doc, undefined)).toEqual([
+      { name: "X", blocks: [{ blockId: UNRESOLVED_BLOCK, pos: [0, 0, 0] }] },
+    ]);
   });
 
-  it("renders the last `:=` identify statement in the document as the build, per the documented default", () => {
+  it("renders every top-level `:=` identify statement as its own scene, in document order", () => {
     const doc = parseDocument(`
 [[ [$_] ]]:=/first/;
 
 [[ [!<$][!<$] ]]:=/second/;
 `);
-    const placed = buildScene(doc, mapping);
-    expect(placed).toEqual(
-      expect.arrayContaining([
-        { blockId: "minecraft:dirt", pos: [0, 0, 0] },
-        { blockId: "minecraft:dirt", pos: [1, 0, 0] },
-      ]),
-    );
-    expect(placed).toHaveLength(2);
+    const scenes = buildScenes(doc, mapping);
+    expect(scenes.map((s) => s.name)).toEqual(["first", "second"]);
+    expect(scenes[0].blocks).toEqual([{ blockId: "minecraft:stone", pos: [0, 0, 0] }]);
+    expect(scenes[1].blocks).toEqual([
+      { blockId: "minecraft:dirt", pos: [0, 0, 0] },
+      { blockId: "minecraft:dirt", pos: [1, 0, 0] },
+    ]);
+  });
+
+  it("excludes an identify statement from the scene list when it's referenced by glyph elsewhere, rendering it only as embedded content", () => {
+    const doc = parseDocument(`
+[[ [$_] ]]:=/part/;
+
+---
+%% ::= /part/;
+---
+
+[[ %%%% ]]:=/assembly/;
+`);
+    const scenes = buildScenes(doc, mapping);
+    // /part/ is consumed via the %% glyph inside /assembly/, so it's a
+    // sub-component, not a scene of its own -- only /assembly/ renders.
+    expect(scenes.map((s) => s.name)).toEqual(["assembly"]);
+    expect(scenes[0].blocks).toEqual([
+      { blockId: "minecraft:stone", pos: [0, 0, 0] },
+      { blockId: "minecraft:stone", pos: [1, 0, 0] },
+    ]);
   });
 
   it("throws NoRenderableModelError when the document defines no identify statement", () => {
     const doc = parseDocument(`[@0]<3> == [[ [@0][@0][@0] ]];`);
-    expect(() => buildScene(doc, mapping)).toThrow(NoRenderableModelError);
+    expect(() => buildScenes(doc, mapping)).toThrow(NoRenderableModelError);
   });
 });
