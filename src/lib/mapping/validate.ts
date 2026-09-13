@@ -20,7 +20,7 @@ export function validateMapping(data: unknown): ValidateMappingResult {
     return { ok: false, error: 'Mapping must be a JSON object.' }
   }
 
-  const { version, words, places } = data
+  const { version, words } = data
 
   if (typeof version !== 'number' || !Number.isInteger(version)) {
     return { ok: false, error: '"version" must be an integer.' }
@@ -39,20 +39,5 @@ export function validateMapping(data: unknown): ValidateMappingResult {
     }
   }
 
-  if (places !== undefined) {
-    if (!isPlainObject(places)) {
-      return { ok: false, error: '"places", if present, must be an object.' }
-    }
-    for (const [place, value] of Object.entries(places)) {
-      if (typeof value !== 'string') {
-        return { ok: false, error: `"places.${place}" must be a string (got ${JSON.stringify(value)}).` }
-      }
-    }
-  }
-
-  const mapping: Mapping = places !== undefined
-    ? { version, words: words as Record<string, string>, places: places as Record<string, string> }
-    : { version, words: words as Record<string, string> }
-
-  return { ok: true, mapping }
+  return { ok: true, mapping: { version, words: words as Record<string, string> } }
 }
