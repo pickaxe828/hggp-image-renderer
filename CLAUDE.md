@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project status
 
-The repository is **empty** — no source, no git history. The renderer has not been started, but the toolchain is decided: **Vite** for dev server/build, **Bun** as package manager and JS runtime. Do not assume build, lint, or test commands exist yet; add this section's actual commands (`bun install`, `bun run dev`, etc.) once the Vite scaffold lands.
+The repository has docs but no app source yet. The renderer has not been started, but the toolchain is decided: **Vite** for dev server/build, **Bun** as package manager and JS runtime. **React**, **Tailwind**, and **shadcn/ui** are preferred for the UI layer (panels, controls, the mapping-import flow) once one is needed. Do not assume build, lint, or test commands exist yet; add this section's actual commands (`bun install`, `bun run dev`, etc.) once the Vite scaffold lands.
 
 ## What this project is
 
