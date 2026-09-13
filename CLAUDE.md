@@ -4,7 +4,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project status
 
-The repository has docs but no app source yet. The renderer has not been started, but the toolchain is decided: **Vite** for dev server/build, **Bun** as package manager and JS runtime. **React**, **Tailwind**, and **shadcn/ui** are preferred for the UI layer (panels, controls, the mapping-import flow) once one is needed. Do not assume build, lint, or test commands exist yet; add this section's actual commands (`bun install`, `bun run dev`, etc.) once the Vite scaffold lands.
+The Vite + Bun + React + Tailwind + shadcn/ui scaffold has landed (TypeScript, `src/` app shell, `@/*` import alias, no renderer logic yet — that's still to build). Commands:
+
+```bash
+bun install      # install dependencies
+bun run dev      # start the dev server
+bun run build    # typecheck + production build
+bun run lint     # oxlint
+bun run preview  # preview a production build
+```
+
+No test runner is set up yet; add one when there's non-trivial logic to test (the notation parser is the first candidate).
 
 ## What this project is
 
@@ -200,3 +210,17 @@ Ask the user rather than inventing answers:
 
 - How a model's **slice plane** (XY / YZ / XZ) is actually determined — the working assumption above branches on it, but nothing seen so far shows how the notation declares it. This is the blocker for correct 3D output.
 - Whether the -Y / +Y split above is the intended rule; it is a provisional decision by the user, not spec.
+
+## Agent skills
+
+### Issue tracker
+
+Issues live in GitHub Issues for this repo, via the `gh` CLI. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default canonical labels used as-is (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: `CONTEXT.md` + `docs/adr/` at the repo root. See `docs/agents/domain.md`.
