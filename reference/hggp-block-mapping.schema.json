@@ -1,0 +1,23 @@
+{
+  "$id": "hggp-block-mapping.schema.json",
+  "title": "hggp word/place -> Minecraft block mapping",
+  "description": "Shape of the JSON a user imports through the app's 'Import mapping' UI. Never ship a filled-in copy of this from this repo — see CLAUDE.md 'Word -> block mapping: spoiler policy'. The app persists the imported document to localStorage as-is.",
+  "type": "object",
+  "required": ["version", "words"],
+  "properties": {
+    "version": {
+      "type": "integer",
+      "description": "Schema version, bump on breaking shape changes so the app can migrate/reject old imports."
+    },
+    "words": {
+      "type": "object",
+      "description": "Exact hggp word (bracket contents, e.g. the 'x' in [x]) -> Minecraft block ID. Lookup is a flat exact-string match — no morphology is parsed or assumed at runtime.",
+      "additionalProperties": { "type": "string", "pattern": "^minecraft:[a-z0-9_]+$" }
+    },
+    "places": {
+      "type": "object",
+      "description": "Optional: hggp location/dimension word (e.g. the 'x' in /x/) -> dimension id. Not a block; not consumed by the block resolver. Reserved for a future feature (per-dimension sky/fog/lighting) — currently just carried through unused.",
+      "additionalProperties": { "type": "string" }
+    }
+  }
+}

@@ -1,0 +1,12 @@
+# Never commit the hggp word -> Minecraft block answer table.
+# It's puzzle-spoiler content; see CLAUDE.md "Word -> block mapping: spoiler policy".
+# The app loads it at runtime via user import (persisted to localStorage), not from this repo.
+/private/
+
+# Toolchain (Vite + Bun) — added ahead of scaffolding landing
+node_modules/
+dist/
+.env
+.env.*
+!.env.example
+.DS_Store
