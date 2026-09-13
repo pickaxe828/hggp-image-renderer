@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "words": {
+    "$test1": "minecraft:stone",
+    "$test2": "minecraft:dirt"
+  },
+  "places": {
+    "$place1": "the_end"
+  }
+}
