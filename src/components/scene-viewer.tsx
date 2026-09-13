@@ -19,6 +19,55 @@ configure({ THREE })
 // it to actually draw that icon -- barrier is normally invisible in-game.
 const PLACEHOLDER_BLOCK_ID = 'barrier'
 
+// Minecraft's clear-day overworld sky, approximated as a vertical gradient
+// (no Mojang texture involved -- see CLAUDE.md's "Texture sourcing" note on
+// why block textures aren't bundled; this sidesteps that entirely). Colors
+// are a standard eyeballed match for the vanilla zenith/horizon blue.
+const SKY_TOP_COLOR = new THREE.Color(0x77aaff)
+const SKY_BOTTOM_COLOR = new THREE.Color(0xd6ecff)
+
+/**
+ * Builds a large, camera-following sky dome: a sphere rendered from the
+ * inside (BackSide) with a vertical color gradient, so every orbit angle
+ * shows sky rather than the canvas clear color. Radius/position are set
+ * per scene in the `createScene` handler below, once the model's bounds
+ * (and so a safe "large enough, still inside camera.far" size) are known.
+ */
+function createSkyDome(): THREE.Mesh<THREE.SphereGeometry, THREE.ShaderMaterial> {
+  const geometry = new THREE.SphereGeometry(1, 32, 16)
+  const material = new THREE.ShaderMaterial({
+    uniforms: {
+      topColor: { value: SKY_TOP_COLOR },
+      bottomColor: { value: SKY_BOTTOM_COLOR },
+    },
+    vertexShader: `
+      varying vec3 vWorldPosition;
+      void main() {
+        vec4 worldPosition = modelMatrix * vec4(position, 1.0);
+        vWorldPosition = worldPosition.xyz;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: `
+      uniform vec3 topColor;
+      uniform vec3 bottomColor;
+      varying vec3 vWorldPosition;
+      void main() {
+        float h = normalize(vWorldPosition).y;
+        gl_FragColor = vec4(mix(bottomColor, topColor, max(h, 0.0) * 0.5 + 0.5), 1.0);
+      }
+    `,
+    side: THREE.BackSide,
+    depthWrite: false,
+    fog: false,
+  })
+  const mesh = new THREE.Mesh(geometry, material)
+  // Sky renders first, at the far clip plane -- it should never occlude or
+  // be occluded by z-fighting with the (much closer) block model.
+  mesh.renderOrder = -1
+  return mesh
+}
+
 export interface SceneViewerProps {
   blocks: readonly PlacedBlock[]
   /** The client-jar bytes from `loadMojangAssets`, or `null` while still loading. */
@@ -51,6 +100,9 @@ export function SceneViewer({ blocks, assets }: SceneViewerProps) {
 
     const scene = new THREE.Scene()
     const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 2000)
+
+    const sky = createSkyDome()
+    scene.add(sky)
 
     const controls = new OrbitControls(camera, renderer.domElement)
     // No damping: render-on-demand (below) instead of a continuous
@@ -102,6 +154,13 @@ export function SceneViewer({ blocks, assets }: SceneViewerProps) {
         camera.updateProjectionMatrix()
         controls.target.copy(center)
         controls.update()
+
+        // Keep the sky dome centered on the model and comfortably inside
+        // camera.far regardless of this scene's size (a stacked multi-scene
+        // canvas especially varies a lot).
+        sky.position.copy(center)
+        sky.scale.setScalar(camera.far * 0.9)
+
         renderOnce()
       })
       .catch((err: unknown) => {
@@ -115,20 +174,26 @@ export function SceneViewer({ blocks, assets }: SceneViewerProps) {
       controls.removeEventListener('change', renderOnce)
       controls.dispose()
       sceneHandle?.dispose()
+      sky.geometry.dispose()
+      sky.material.dispose()
       renderer.dispose()
       container.removeChild(renderer.domElement)
     }
   }, [blocks, assets])
 
   if (!assets) {
-    return <p className="text-sm text-muted-foreground">Loading Minecraft assets…</p>
+    return (
+      <div className="flex min-h-80 flex-1 items-center justify-center">
+        <p className="text-sm text-muted-foreground">Loading Minecraft assets…</p>
+      </div>
+    )
   }
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex min-h-0 flex-1 flex-col gap-2">
       <div
         ref={containerRef}
-        className="h-[60vh] min-h-80 w-full touch-none rounded-lg border border-input"
+        className="min-h-80 w-full flex-1 touch-none rounded-lg border border-input"
       />
       {error && (
         <p role="alert" className="text-sm text-destructive">

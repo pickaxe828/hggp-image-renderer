@@ -97,6 +97,31 @@ describe("buildScenes", () => {
     ]);
   });
 
+  it("resolves each scene's glyphs against the module table as it stood at that scene's own position, not the document's final table", () => {
+    // Regression test: ░░ is rebound between /first/ and /second/, exactly
+    // as CLAUDE.md's own module doc describes ("░░ goes from [$..] to
+    // [$#w] in the reference example"). Each scene must keep reading ░░
+    // the way it was bound when *it* was written, not however a later
+    // module redefines it.
+    const doc = parseDocument(`
+---
+░░ ::= [$_];
+---
+
+[[ ░░ ]]:=/first/;
+
+---
+░░ ::= [!<$];
+---
+
+[[ ░░ ]]:=/second/;
+`);
+    const scenes = buildScenes(doc, mapping);
+    expect(scenes.map((s) => s.name)).toEqual(["first", "second"]);
+    expect(scenes[0].blocks).toEqual([{ blockId: "minecraft:stone", pos: [0, 0, 0] }]);
+    expect(scenes[1].blocks).toEqual([{ blockId: "minecraft:dirt", pos: [0, 0, 0] }]);
+  });
+
   it("throws NoRenderableModelError when the document defines no identify statement", () => {
     const doc = parseDocument(`[@0]<3> == [[ [@0][@0][@0] ]];`);
     expect(() => buildScenes(doc, mapping)).toThrow(NoRenderableModelError);

@@ -98,7 +98,7 @@ function App() {
         <ResizableHandle withHandle />
 
         <ResizablePanel defaultSize="65" minSize="30" className="min-w-0">
-          <div className="h-full overflow-y-auto p-4">
+          <div className="flex h-full flex-col overflow-hidden p-4">
             {!scenes && !sceneError && (
               <p className="text-sm text-muted-foreground">
                 Paste or import hggp build notation on the left to render it here.
@@ -106,7 +106,7 @@ function App() {
             )}
 
             {scenes && stackedBlocks && (
-              <div className="flex h-full flex-col gap-2">
+              <div className="flex min-h-0 flex-1 flex-col gap-2">
                 {scenes.length > 1 && (
                   <p className="font-mono text-sm text-muted-foreground">
                     {scenes.map((scene) => `/${scene.name}/`).join('  ·  ')}

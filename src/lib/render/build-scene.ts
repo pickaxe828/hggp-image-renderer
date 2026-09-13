@@ -33,14 +33,22 @@ export class NoRenderableModelError extends Error {
  * that's redefined by more than one `identify` statement uses its final
  * binding (later shadows earlier, same as the module table) but keeps the
  * position of its first appearance, so redefinition doesn't reorder scenes.
- * Every scene is placed against the document's fully-accumulated module
- * table and model set, not a per-statement snapshot -- the same
- * approximation the single-scene version made, just extended to more than
- * one target.
+ *
+ * Each scene is placed against the module table *as it stood at that
+ * scene's own `identify` statement*, not the document's final table --
+ * per CLAUDE.md's own worked example, a glyph can be rebound between two
+ * models (`░░` going from one word to another), and each model must keep
+ * reading its own glyphs the way they were bound when it was written, not
+ * however a later module redefines them. A glyph cell embedded via element
+ * reference (i.e. a sub-component pulled in through another model's own
+ * glyph) still resolves through the *embedding* model's table, matching
+ * the single-scene version's existing behavior -- only the top-level
+ * per-scene table was wrong before, not that nested case.
  */
 export function buildScenes(document: Document, mapping: Mapping | null | undefined): PlacedScene[] {
   let table: ModuleTable = new Map();
   const models = new Map<string, ModelContent>();
+  const modelTables = new Map<string, ModuleTable>();
   const referencedElementNames = new Set<string>();
   const rootOrder: string[] = [];
   const seenRoots = new Set<string>();
@@ -53,6 +61,11 @@ export function buildScenes(document: Document, mapping: Mapping | null | undefi
       }
     } else if (statement.kind === "identify") {
       models.set(statement.elementName, statement.model);
+      // Snapshot the table as it stands *right now* -- before any module
+      // that appears later in the document can rebind a glyph this model
+      // uses. `table` itself is never mutated in place (mergeModuleTable
+      // always returns a fresh Map), so this reference stays frozen.
+      modelTables.set(statement.elementName, table);
       if (!seenRoots.has(statement.elementName)) {
         seenRoots.add(statement.elementName);
         rootOrder.push(statement.elementName);
@@ -70,7 +83,8 @@ export function buildScenes(document: Document, mapping: Mapping | null | undefi
 
   return rootNames.map((name) => {
     const model = models.get(name)!;
-    const placedWords = placeModelInWorld(model, table, lookupModel, new Set([name]));
+    const modelTable = modelTables.get(name)!;
+    const placedWords = placeModelInWorld(model, modelTable, lookupModel, new Set([name]));
     return {
       name,
       blocks: placedWords.map((placedWord) => ({
