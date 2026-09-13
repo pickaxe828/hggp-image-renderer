@@ -77,11 +77,13 @@ export interface Stack3D {
 }
 
 /** `[[ ... ]] := /name/` -- identify: this model IS the existing element
- * `name`. */
+ * `name`. The `:= /name/` suffix itself is optional: a bare `[[ ... ]];`
+ * model is valid too, it just has no name to be referenced by elsewhere in
+ * the document or shown as a title -- see `elementName`. */
 export interface IdentifyStatement {
   readonly kind: "identify";
   readonly model: ModelContent;
-  readonly elementName: string;
+  readonly elementName?: string;
 }
 
 /** `word<extent> == [[ ... ]]` -- equivalence: a sized word and an explicit

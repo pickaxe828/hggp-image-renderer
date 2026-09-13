@@ -104,6 +104,14 @@ describe("round trip: parseDocument -> serializeDocument -> parseDocument", () =
 `);
   });
 
+  it("round-trips an element reference name containing a literal '/'", () => {
+    expectRoundTrips(`[[ [@0] ]]:=/>/C//;`);
+  });
+
+  it("round-trips an identify statement with no `:=/name/;` suffix", () => {
+    expectRoundTrips(`[[ [@0][@0] ]];`);
+  });
+
   it("round-trips a dangling forward element reference (valid, not an error)", () => {
     // /@/ is referenced by the module but never identified anywhere in the
     // document -- parsing must succeed regardless.

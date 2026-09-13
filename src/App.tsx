@@ -109,7 +109,7 @@ function App() {
               <div className="flex min-h-0 flex-1 flex-col gap-2">
                 {scenes.length > 1 && (
                   <p className="font-mono text-sm text-muted-foreground">
-                    {scenes.map((scene) => `/${scene.name}/`).join('  ·  ')}
+                    {scenes.map((scene) => (scene.name ? `/${scene.name}/` : '(untitled)')).join('  ·  ')}
                   </p>
                 )}
                 <Suspense fallback={<p className="text-sm text-muted-foreground">Loading 3D viewer…</p>}>

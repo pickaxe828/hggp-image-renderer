@@ -122,6 +122,34 @@ describe("buildScenes", () => {
     expect(scenes[1].blocks).toEqual([{ blockId: "minecraft:dirt", pos: [0, 0, 0] }]);
   });
 
+  it("treats an unnamed identify statement (no `:=/name/;`) as always its own scene, in document order alongside named ones", () => {
+    const doc = parseDocument(`
+[[ [$_] ]];
+
+[[ [!<$][!<$] ]]:=/second/;
+`);
+    const scenes = buildScenes(doc, mapping);
+    expect(scenes.map((s) => s.name)).toEqual([undefined, "second"]);
+    expect(scenes[0].blocks).toEqual([{ blockId: "minecraft:stone", pos: [0, 0, 0] }]);
+    expect(scenes[1].blocks).toEqual([
+      { blockId: "minecraft:dirt", pos: [0, 0, 0] },
+      { blockId: "minecraft:dirt", pos: [1, 0, 0] },
+    ]);
+  });
+
+  it("keeps two unnamed identify statements as separate scenes rather than collapsing them", () => {
+    const doc = parseDocument(`
+[[ [$_] ]];
+
+[[ [!<$] ]];
+`);
+    const scenes = buildScenes(doc, mapping);
+    expect(scenes).toHaveLength(2);
+    expect(scenes.map((s) => s.name)).toEqual([undefined, undefined]);
+    expect(scenes[0].blocks).toEqual([{ blockId: "minecraft:stone", pos: [0, 0, 0] }]);
+    expect(scenes[1].blocks).toEqual([{ blockId: "minecraft:dirt", pos: [0, 0, 0] }]);
+  });
+
   it("throws NoRenderableModelError when the document defines no identify statement", () => {
     const doc = parseDocument(`[@0]<3> == [[ [@0][@0][@0] ]];`);
     expect(() => buildScenes(doc, mapping)).toThrow(NoRenderableModelError);

@@ -199,6 +199,61 @@ describe("parseDocument", () => {
     ]);
   });
 
+  it("preserves a trailing space that is the second half of a space-containing glyph, when the row ends at a newline rather than the model's own ]]", () => {
+    // Regression test: parseRow used to unconditionally .trim() every row,
+    // which silently ate this trailing space even though it's the second,
+    // meaningful character of the glyph "· " (dot+space, defined below as
+    // dot followed by two spaces -- the first space is the glyph's own
+    // second character, the second is ordinary whitespace before "::=").
+    const doc = parseDocument(`
+---
+·  ::= [$_];
+---
+
+[[
+  · 
+]]:=/M/;
+`);
+    const [, model] = doc.statements;
+    if (model.kind !== "identify") throw new Error("unreachable");
+    if (model.model.kind !== "slice2d") throw new Error("unreachable");
+    expect(model.model.rows[0]).toEqual([{ kind: "glyph", glyph: "· " }]);
+  });
+
+  it("still trims trailing whitespace when a row is cut short by the model's own ]] on the same line", () => {
+    const doc = parseDocument(`[[ ░░ ]]:=/A/;`);
+    const stmt = doc.statements[0];
+    if (stmt.kind !== "identify") throw new Error("unreachable");
+    if (stmt.model.kind !== "slice2d") throw new Error("unreachable");
+    expect(stmt.model.rows[0]).toEqual([{ kind: "glyph", glyph: "░░" }]);
+  });
+
+  it("parses an element reference name containing a literal '/', delimited by the last '/' before the terminator", () => {
+    const doc = parseDocument(`[[ [@0] ]]:=/>/C//;`);
+    const stmt = doc.statements[0];
+    if (stmt.kind !== "identify") throw new Error("unreachable");
+    expect(stmt.elementName).toBe(">/C/");
+  });
+
+  it("parses a module rhs element reference name containing a literal '/'", () => {
+    const doc = parseDocument(`
+---
+@@ ::= />/C//;
+---
+`);
+    const mod = doc.statements[0];
+    if (mod.kind !== "module") throw new Error("unreachable");
+    expect(mod.definitions[0].rhs).toEqual({ kind: "element", name: ">/C/" });
+  });
+
+  it("parses an identify statement with no `:=/name/;` suffix -- the name is optional", () => {
+    const doc = parseDocument(`[[ [$_] ]];`);
+    const stmt = doc.statements[0];
+    expect(stmt.kind).toBe("identify");
+    if (stmt.kind !== "identify") throw new Error("unreachable");
+    expect(stmt.elementName).toBeUndefined();
+  });
+
   it("throws a clear error on an unterminated module block", () => {
     expect(() => parseDocument(`--- \n@@ ::= /@/;\n`)).toThrow(/---/);
   });

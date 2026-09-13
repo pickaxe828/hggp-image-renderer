@@ -26,7 +26,9 @@ function serializeStatement(statement: Statement): string {
     case "module":
       return serializeModuleBlock(statement.definitions);
     case "identify":
-      return `${serializeModel(statement.model, "")}:=/${statement.elementName}/;`;
+      return statement.elementName === undefined
+        ? `${serializeModel(statement.model, "")};`
+        : `${serializeModel(statement.model, "")}:=/${statement.elementName}/;`;
     case "equivalence":
       return `${serializeWordRef(statement.word)} == ${serializeModel(statement.model, "")};`;
   }

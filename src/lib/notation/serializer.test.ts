@@ -54,6 +54,23 @@ describe("serializeDocument", () => {
     expect(parseDocument(text)).toEqual(doc);
   });
 
+  it("serializes an identify statement with no name, omitting the `:=/name/;` suffix", () => {
+    const doc: Document = {
+      statements: [
+        {
+          kind: "identify",
+          model: {
+            kind: "slice2d",
+            rows: [[{ kind: "word", word: "@0" }]],
+          },
+        },
+      ],
+    };
+    const text = serializeDocument(doc);
+    expect(text).not.toContain(":=");
+    expect(parseDocument(text)).toEqual(doc);
+  });
+
   it("serializes an equivalence statement with a 3-D extent as nested slices", () => {
     const doc: Document = {
       statements: [

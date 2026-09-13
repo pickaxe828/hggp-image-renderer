@@ -44,6 +44,14 @@ export class NoRenderableModelError extends Error {
  * glyph) still resolves through the *embedding* model's table, matching
  * the single-scene version's existing behavior -- only the top-level
  * per-scene table was wrong before, not that nested case.
+ *
+ * An `identify` statement with no `:=/name/;` suffix has no name for
+ * anything else in the document to reference by glyph, so it can never be
+ * the referenced sub-component case above -- it is always its own scene, in
+ * document order. It's keyed internally by a synthetic id (never derivable
+ * from real notation, so it can't collide with a real element name) that
+ * never enters `referencedElementNames`, and surfaces to callers as a
+ * `PlacedScene` with `name: undefined`.
  */
 export function buildScenes(document: Document, mapping: Mapping | null | undefined): PlacedScene[] {
   let table: ModuleTable = new Map();
@@ -52,6 +60,8 @@ export function buildScenes(document: Document, mapping: Mapping | null | undefi
   const referencedElementNames = new Set<string>();
   const rootOrder: string[] = [];
   const seenRoots = new Set<string>();
+  const unnamedKeys = new Set<string>();
+  let unnamedCounter = 0;
 
   for (const statement of document.statements) {
     if (statement.kind === "module") {
@@ -60,33 +70,35 @@ export function buildScenes(document: Document, mapping: Mapping | null | undefi
         if (definition.rhs.kind === "element") referencedElementNames.add(definition.rhs.name);
       }
     } else if (statement.kind === "identify") {
-      models.set(statement.elementName, statement.model);
+      const key = statement.elementName ?? `\0unnamed:${unnamedCounter++}`;
+      if (statement.elementName === undefined) unnamedKeys.add(key);
+      models.set(key, statement.model);
       // Snapshot the table as it stands *right now* -- before any module
       // that appears later in the document can rebind a glyph this model
       // uses. `table` itself is never mutated in place (mergeModuleTable
       // always returns a fresh Map), so this reference stays frozen.
-      modelTables.set(statement.elementName, table);
-      if (!seenRoots.has(statement.elementName)) {
-        seenRoots.add(statement.elementName);
-        rootOrder.push(statement.elementName);
+      modelTables.set(key, table);
+      if (!seenRoots.has(key)) {
+        seenRoots.add(key);
+        rootOrder.push(key);
       }
     }
   }
 
-  const rootNames = rootOrder.filter((name) => !referencedElementNames.has(name));
+  const rootKeys = rootOrder.filter((key) => unnamedKeys.has(key) || !referencedElementNames.has(key));
 
-  if (rootNames.length === 0) {
-    throw new NoRenderableModelError("Document defines no `[[ ]] := /name/` model to render.");
+  if (rootKeys.length === 0) {
+    throw new NoRenderableModelError("Document defines no `[[ ]]` model to render.");
   }
 
   const lookupModel: ModelLookup = (name) => models.get(name);
 
-  return rootNames.map((name) => {
-    const model = models.get(name)!;
-    const modelTable = modelTables.get(name)!;
-    const placedWords = placeModelInWorld(model, modelTable, lookupModel, new Set([name]));
+  return rootKeys.map((key) => {
+    const model = models.get(key)!;
+    const modelTable = modelTables.get(key)!;
+    const placedWords = placeModelInWorld(model, modelTable, lookupModel, new Set([key]));
     return {
-      name,
+      name: unnamedKeys.has(key) ? undefined : key,
       blocks: placedWords.map((placedWord) => ({
         blockId: resolveBlock(placedWord.word, mapping),
         pos: placedWord.pos,

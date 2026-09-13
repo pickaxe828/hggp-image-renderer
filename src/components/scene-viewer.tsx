@@ -116,7 +116,17 @@ export function SceneViewer({ blocks, assets }: SceneViewerProps) {
     function resize() {
       const { clientWidth: width, clientHeight: height } = container as HTMLDivElement
       if (width === 0 || height === 0) return
-      renderer.setSize(width, height, false)
+      // `updateStyle` (3rd arg) must stay at its default `true`: it sets
+      // the canvas's CSS width/height to match the container. With it
+      // `false`, the canvas element's on-page box falls back to its
+      // width/height *attributes*, which setSize always sets to
+      // width/height * the (2x-capped) devicePixelRatio -- i.e. up to 2x
+      // too big. The parent has `overflow-hidden` (see App.tsx), so the
+      // oversized canvas doesn't visibly overflow the page -- it gets
+      // silently cropped to the container's top-left corner instead,
+      // which is what made the (correctly centered) render appear zoomed
+      // in with the model pushed toward the bottom-right.
+      renderer.setSize(width, height)
       camera.aspect = width / height
       camera.updateProjectionMatrix()
       renderOnce()

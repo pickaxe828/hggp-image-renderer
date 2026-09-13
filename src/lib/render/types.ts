@@ -21,10 +21,11 @@ export interface PlacedBlock {
 }
 
 /** One renderable build within a document: an `identify` statement's
- * element name plus its resolved blocks. A document can name more than one
- * of these -- see `buildScenes` in build-scene.ts -- and the app renders
- * each as its own scene, in document order. */
+ * element name (if it has one -- the `:=/name/;` suffix is optional, see
+ * `IdentifyStatement.elementName`) plus its resolved blocks. A document can
+ * name more than one of these -- see `buildScenes` in build-scene.ts -- and
+ * the app renders each as its own scene, in document order. */
 export interface PlacedScene {
-  readonly name: string;
+  readonly name: string | undefined;
   readonly blocks: readonly PlacedBlock[];
 }

@@ -99,8 +99,29 @@ class Parser {
 
   // ---- shared primitives ----
 
+  /** Element ref names are opaque and may themselves contain literal "/"
+   * characters (e.g. naming the compound word ">/C/", written as
+   * `/>/C//`) -- so unlike the other delimiter-bounded constructs, the
+   * closing delimiter here isn't the *next* "/", it's the *last* one
+   * before this statement ends. A statement's terminator is ";", ";;",
+   * or (only at the very end of input) omitted entirely, in which case
+   * the ref instead ends wherever the surrounding construct closes
+   * ("---" for a module, "]]" for a model) or at the end of the
+   * document. Scan up to whichever of those comes first and take the
+   * last "/" in that span as the close. */
   private parseElementRef(): ElementRef {
-    const name = this.scanDelimited("/", "/", "element reference");
+    this.consumeLiteral("/");
+    const candidates = [";", "---", "]]"]
+      .map((token) => this.text.indexOf(token, this.pos))
+      .filter((idx) => idx !== -1);
+    const boundary = candidates.length > 0 ? Math.min(...candidates) : this.text.length;
+    const window = this.text.slice(this.pos, boundary);
+    const closeIdx = window.lastIndexOf("/");
+    if (closeIdx === -1) {
+      throw new Error(`Unterminated element reference (missing closing /) at position ${this.pos}`);
+    }
+    const name = window.slice(0, closeIdx);
+    this.pos += closeIdx + 1;
     return { kind: "element", name };
   }
 
@@ -139,6 +160,13 @@ class Parser {
     this.consumeLiteral("[[");
     const model = this.parseModelContent();
     this.skipWs();
+    // The `:= /name/` suffix is optional -- a model with no name to be
+    // identified by is still a valid, renderable model, just an unnamed
+    // one (see `IdentifyStatement.elementName`).
+    if (!this.peek(":=")) {
+      this.consumeTerminator();
+      return { kind: "identify", model };
+    }
     this.consumeLiteral(":=");
     this.skipWs();
     const element = this.parseElementRef();
@@ -207,7 +235,16 @@ class Parser {
     let end = this.text.length;
     if (nlIdx !== -1) end = Math.min(end, nlIdx);
     if (closeIdx !== -1) end = Math.min(end, closeIdx);
-    const rowText = this.text.slice(this.pos, end).trim();
+    // Leading whitespace is always layout (indentation) and is safe to
+    // drop. Trailing whitespace is layout too when the row is cut short by
+    // the model's own "]]" delimiter -- that boundary is unambiguous.
+    // But when a row ends at a newline, trailing whitespace may be the
+    // second half of a space-containing glyph (e.g. a glyph "· " defined as
+    // dot+space); trimming it there would silently eat real content, so it
+    // is preserved and left for the tokenizer to validate.
+    const endsAtClose = closeIdx !== -1 && end === closeIdx;
+    const raw = this.text.slice(this.pos, end);
+    const rowText = endsAtClose ? raw.trim() : raw.replace(/^\s+/, "");
     this.pos = end;
     return parseRowCells(rowText);
   }
