@@ -1,4 +1,4 @@
-import { expandExtent, resolveElement, resolveGlyph } from "@/lib/notation";
+import { expandExtent, resolveElement, resolveGlyph, resolveRowCells } from "@/lib/notation";
 import type { Cell, Extent, ModelContent, ModelLookup, ModuleTable, Slice2D, Stack3D } from "@/lib/notation";
 import { resolveWorldY } from "./world-y.ts";
 import type { PlacedWord } from "./types.ts";
@@ -64,7 +64,7 @@ function resolveCellContent(cell: Cell, table: ModuleTable): ResolvedCellContent
       ? { kind: "sized-word", word: cell.word, extent: cell.extent }
       : { kind: "word", word: cell.word };
   }
-  const rhs = resolveGlyph(table, cell.glyph);
+  const rhs = resolveGlyph(table, cell.text);
   if (rhs.kind === "element") return { kind: "element", name: rhs.name };
   return rhs.extent
     ? { kind: "sized-word", word: rhs.word, extent: rhs.extent }
@@ -96,7 +96,10 @@ function flattenSlice2D(
     let uOffset = 0;
     let rowHeight = 1;
 
-    for (const cell of row) {
+    // A raw glyph-run cell can hold more than one grid cell's worth of
+    // glyphs (see GlyphCell in ir.ts) -- expand against this scene's table
+    // before laying cells out left to right.
+    for (const cell of resolveRowCells(row, table)) {
       const resolved = resolveCellContent(cell, table);
       let cellWidth = 1;
       let cellHeight = 1;

@@ -42,7 +42,7 @@ describe("serializeDocument", () => {
             kind: "slice2d",
             rows: [
               [
-                { kind: "glyph", glyph: ".." },
+                { kind: "glyph", text: ".." },
                 { kind: "word", word: "@0" },
               ],
             ],

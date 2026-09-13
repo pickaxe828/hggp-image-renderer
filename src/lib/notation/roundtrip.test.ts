@@ -104,6 +104,20 @@ describe("round trip: parseDocument -> serializeDocument -> parseDocument", () =
 `);
   });
 
+  it("round-trips a document using 1-character glyphs", () => {
+    expectRoundTrips(`
+---
+# ::= [$#w~];
+@ ::= [|];
+---
+[[
+  ####
+  #@@#
+  ####
+]]:=/portal/;
+`);
+  });
+
   it("round-trips an element reference name containing a literal '/'", () => {
     expectRoundTrips(`[[ [@0] ]]:=/>/C//;`);
   });

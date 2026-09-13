@@ -8,8 +8,8 @@
  * interpreted, only carried through. */
 export type Word = string;
 
-/** A two-code-point glyph, e.g. "..", "@@", "~w". Opaque, separate namespace
- * from Word. */
+/** A glyph as bound by a module: 1 or 2 code points, e.g. "#", "..", "@@",
+ * "~w". Opaque, separate namespace from Word. */
 export type Glyph = string;
 
 /** An extent suffix, e.g. <3> -> [3], <3,3> -> [3,3], <3,3,3> -> [3,3,3].
@@ -54,9 +54,20 @@ export interface ModuleBlock {
  * glyph shorthand (resolved later via the running module table). */
 export type Cell = WordRef | GlyphCell;
 
+/**
+ * A raw, unsplit run of glyph-shorthand text -- e.g. an entire row like
+ * "......@@...." with no bracketed words in it is ONE `GlyphCell`, not one
+ * per two-character glyph. Glyphs are 1 or 2 code points wide (per-glyph,
+ * not fixed document-wide), so splitting `text` into individual glyphs
+ * requires knowing which widths are actually bound in the module table --
+ * information parsing deliberately doesn't have (same reasoning as why
+ * extents are kept as metadata rather than expanded at parse time). See
+ * `resolveRowCells` in modules.ts for that split, run against a specific
+ * scene's module table.
+ */
 export interface GlyphCell {
   readonly kind: "glyph";
-  readonly glyph: Glyph;
+  readonly text: string;
 }
 
 export type Row = Cell[];
@@ -104,5 +115,15 @@ export class CycleError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "CycleError";
+  }
+}
+
+/** Lives here (rather than in modules.ts, which owns `resolveGlyph`) so
+ * tokenizer.ts can throw it too, without an import cycle between the two --
+ * ir.ts is the shared leaf both depend on. */
+export class UndefinedGlyphError extends Error {
+  constructor(glyph: string) {
+    super(`Glyph "${glyph}" is not defined by any module in scope`);
+    this.name = "UndefinedGlyphError";
   }
 }

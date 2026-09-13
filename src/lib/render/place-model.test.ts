@@ -7,8 +7,8 @@ function word(w: string): { kind: "word"; word: string } {
   return { kind: "word", word: w };
 }
 
-function glyph(g: string): { kind: "glyph"; glyph: string } {
-  return { kind: "glyph", glyph: g };
+function glyph(g: string): { kind: "glyph"; text: string } {
+  return { kind: "glyph", text: g };
 }
 
 function slice2d(rows: Row[]): Slice2D {

@@ -1,4 +1,3 @@
-import { tokenizeGlyphRow } from "./tokenizer.ts";
 import type {
   Cell,
   Document,
@@ -79,14 +78,39 @@ class Parser {
 
   private parseGlyphDefinition(): GlyphDefinition {
     this.skipWs();
-    const glyph = this.readCodePoints(2, "glyph in module definition");
-    this.skipWs();
+    const glyph = this.readGlyphToken();
     this.consumeLiteral("::=");
     this.skipWs();
     const rhs = this.parseModuleRhs();
     this.skipWs();
     this.consumeTerminator();
     return { kind: "definition", glyph, rhs };
+  }
+
+  /** Reads a module definition's glyph: the code points from the current
+   * position up to the next "::=", with exactly one trailing whitespace
+   * code point (the mandatory separator) stripped if present. Any further
+   * trailing whitespace is glyph content -- this is what lets a glyph
+   * legitimately end in a space (e.g. "· ", dot+space) without being
+   * ambiguous with the ordinary case of a glyph directly touching, or
+   * separated by exactly one space from, "::=". The result must be 1 or 2
+   * code points; glyphs are never longer (or shorter) than that. */
+  private readGlyphToken(): string {
+    const eqIdx = this.text.indexOf("::=", this.pos);
+    if (eqIdx === -1) {
+      throw new Error(`Expected "::=" after glyph at position ${this.pos}`);
+    }
+    const codePoints = Array.from(this.text.slice(this.pos, eqIdx));
+    if (codePoints.length > 0 && WHITESPACE.test(codePoints[codePoints.length - 1])) {
+      codePoints.pop();
+    }
+    if (codePoints.length !== 1 && codePoints.length !== 2) {
+      throw new Error(
+        `Glyph must be 1 or 2 characters, got ${JSON.stringify(codePoints.join(""))} at position ${this.pos}`,
+      );
+    }
+    this.pos = eqIdx;
+    return codePoints.join("");
   }
 
   private parseModuleRhs(): ModuleRhs {
@@ -283,22 +307,6 @@ class Parser {
   private atEnd(): boolean {
     return this.pos >= this.text.length;
   }
-
-  /** Reads exactly `n` Unicode code points starting at `pos`, code-point
-   * safe (never splits a surrogate pair), and advances `pos` past them. */
-  private readCodePoints(n: number, what: string): string {
-    // A generous UTF-16 upper bound (astral code points are at most 2
-    // units each); parseRow / row boundaries ensure we never read across a
-    // line we shouldn't.
-    const window = this.text.slice(this.pos, this.pos + n * 4);
-    const codePoints = Array.from(window).slice(0, n);
-    if (codePoints.length < n) {
-      throw new Error(`Unexpected end of input while reading ${what}`);
-    }
-    const value = codePoints.join("");
-    this.pos += value.length;
-    return value;
-  }
 }
 
 function parseExtentBody(body: string): Extent {
@@ -316,8 +324,12 @@ function parseExtentBody(body: string): Extent {
 }
 
 /** Parses one row's text (already stripped of surrounding indentation) into
- * cells, accepting bracketed words and two-code-point glyphs mixed freely
- * in the same row. */
+ * cells, accepting bracketed words and glyph shorthand mixed freely in the
+ * same row. A maximal run of glyph-shorthand text between (or around)
+ * bracketed words becomes ONE glyph cell holding that whole run, unsplit --
+ * splitting it into individual glyphs needs the module table, which
+ * parsing doesn't have (see `GlyphCell` in ir.ts and `resolveRowCells` in
+ * modules.ts). */
 function parseRowCells(rowText: string): Row {
   const codePoints = Array.from(rowText);
   const cells: Cell[] = [];
@@ -326,10 +338,7 @@ function parseRowCells(rowText: string): Row {
 
   const flushGlyphs = (): void => {
     if (glyphBuffer.length === 0) return;
-    const chunk = glyphBuffer.join("");
-    for (const glyph of tokenizeGlyphRow(chunk)) {
-      cells.push({ kind: "glyph", glyph });
-    }
+    cells.push({ kind: "glyph", text: glyphBuffer.join("") });
     glyphBuffer = [];
   };
 

@@ -73,5 +73,5 @@ function serializeRow(row: Row): string {
 }
 
 function serializeCell(cell: Cell): string {
-  return cell.kind === "glyph" ? cell.glyph : serializeWordRef(cell);
+  return cell.kind === "glyph" ? cell.text : serializeWordRef(cell);
 }

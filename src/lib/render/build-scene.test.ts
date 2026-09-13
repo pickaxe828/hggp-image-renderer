@@ -13,6 +13,35 @@ const mapping: Mapping = {
 };
 
 describe("buildScenes", () => {
+  it("renders 1-character glyphs end to end, without mis-pairing them into 2-char cells", () => {
+    // Regression test for a real notation sample: a 4-wide frame using
+    // single-character glyphs "#" (border) and "@" (interior). Before
+    // glyphs could be 1 or 2 characters wide, "#@@#" would mis-pair into
+    // "#@","@#" -- neither bound -- instead of the intended four separate
+    // cells.
+    const portalMapping: Mapping = {
+      version: 1,
+      words: { "$#w~": "minecraft:obsidian", "|": "minecraft:nether_portal" },
+    };
+    const doc = parseDocument(`
+---
+# ::= [$#w~];
+@ ::= [|];
+---
+[[
+  ####
+  #@@#
+  ####
+]]:=/portal/;
+`);
+    const scenes = buildScenes(doc, portalMapping);
+    expect(scenes).toHaveLength(1);
+    const [{ blocks }] = scenes;
+    expect(blocks).toHaveLength(12); // 3 rows x 4 cols, one block per cell
+    expect(blocks.filter((b) => b.blockId === "minecraft:nether_portal")).toHaveLength(2);
+    expect(blocks.filter((b) => b.blockId === "minecraft:obsidian")).toHaveLength(10);
+  });
+
   it("renders the CLAUDE.md reference example end to end, resolving blocks per cell", () => {
     const doc = parseDocument(`
 ---
