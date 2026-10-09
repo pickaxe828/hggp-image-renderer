@@ -87,8 +87,14 @@ out of devtools/git history instead of solving it.
   extents, grammar) is not spoiler content and is fine to hardcode — only
   the finished word → block *answers* are sensitive.
 
-See `private/hggp-block-mapping.md` for what's tracked (non-spoiler
-structure) vs. what only exists in the gitignored private file.
+**The same rule covers the dictionary sheet itself, its CSV exports, and any
+notes derived from them** (including the sheet's structure, tab/filter names,
+and refetch commands). The sheet's sharing settings are public; that does not
+make it publishable here. Keep all of it under gitignored `private/` — never
+in a tracked file or in git history. Only the notation *parser* and the
+mapping *schema* (`reference/hggp-block-mapping.schema.json`) are tracked.
+Local notes live in `private/hggp-block-mapping.md` and
+`private/dictionary-source.md`.
 
 ### Texture sourcing — unresolved, has a licensing dimension
 
@@ -100,8 +106,9 @@ Minecraft block textures are Mojang's assets and are not redistributable, so the
 
 ## External reference
 
-Dictionary, **blocks-only view** — the sheet that matters for this repo:
-(dictionary sheet URL: see private/dictionary-source.md)
+Dictionary, **blocks-only view** — the sheet that matters for this repo. Its
+URL and a cached CSV are kept out of the repo: see
+`private/dictionary-source.md` (local only, gitignored).
 
 Use that view rather than the full dictionary; it is filtered to blocks, which is nearly all this renderer needs.
 
