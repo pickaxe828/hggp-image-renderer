@@ -17,7 +17,10 @@ export const SCENE_STACK_GAP = 16;
  * merged into a single structure. Skips scenes with no blocks (nothing to
  * place, and nothing to leave a gap for).
  */
-export function stackScenesVertically(scenes: readonly PlacedScene[], gap = SCENE_STACK_GAP): PlacedBlock[] {
+export function stackScenesVertically(
+  scenes: readonly PlacedScene[],
+  gap = SCENE_STACK_GAP
+): PlacedBlock[] {
   const combined: PlacedBlock[] = [];
   let nextTopY = 0;
 
@@ -30,7 +33,10 @@ export function stackScenesVertically(scenes: readonly PlacedScene[], gap = SCEN
     const yOffset = nextTopY - maxY;
 
     for (const block of scene.blocks) {
-      combined.push({ blockId: block.blockId, pos: [block.pos[0], block.pos[1] + yOffset, block.pos[2]] });
+      combined.push({
+        blockId: block.blockId,
+        pos: [block.pos[0], block.pos[1] + yOffset, block.pos[2]],
+      });
     }
 
     nextTopY -= maxY - minY + 1 + gap;

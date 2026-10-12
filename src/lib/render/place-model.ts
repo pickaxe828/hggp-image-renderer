@@ -1,5 +1,18 @@
-import { expandExtent, resolveElement, resolveGlyph, resolveRowCells } from "@/lib/notation";
-import type { Cell, Extent, ModelContent, ModelLookup, ModuleTable, Slice2D, Stack3D } from "@/lib/notation";
+import {
+  expandExtent,
+  resolveElement,
+  resolveGlyph,
+  resolveRowCells,
+} from "@/lib/notation";
+import type {
+  Cell,
+  Extent,
+  ModelContent,
+  ModelLookup,
+  ModuleTable,
+  Slice2D,
+  Stack3D,
+} from "@/lib/notation";
 import { resolveWorldY } from "./world-y.ts";
 import type { PlacedWord } from "./types.ts";
 
@@ -55,10 +68,17 @@ interface LocalBlock3D {
 
 type ResolvedCellContent =
   | { readonly kind: "word"; readonly word: string }
-  | { readonly kind: "sized-word"; readonly word: string; readonly extent: Extent }
+  | {
+      readonly kind: "sized-word";
+      readonly word: string;
+      readonly extent: Extent;
+    }
   | { readonly kind: "element"; readonly name: string };
 
-function resolveCellContent(cell: Cell, table: ModuleTable): ResolvedCellContent {
+function resolveCellContent(
+  cell: Cell,
+  table: ModuleTable
+): ResolvedCellContent {
   if (cell.kind === "word") {
     return cell.extent
       ? { kind: "sized-word", word: cell.word, extent: cell.extent }
@@ -86,7 +106,7 @@ function flattenSlice2D(
   slice: Slice2D,
   table: ModuleTable,
   lookupModel: ModelLookup,
-  visited: ReadonlySet<string>,
+  visited: ReadonlySet<string>
 ): FlattenedSlice {
   const blocks: LocalBlock2D[] = [];
   let vOffset = 0;
@@ -107,18 +127,27 @@ function flattenSlice2D(
       if (resolved.kind === "word") {
         blocks.push({ word: resolved.word, u: uOffset, v: vOffset });
       } else if (resolved.kind === "sized-word") {
-        const expanded = expandExtent({ kind: "word", word: resolved.word }, resolved.extent);
+        const expanded = expandExtent(
+          { kind: "word", word: resolved.word },
+          resolved.extent
+        );
         if (expanded.kind !== "slice2d") {
           throw new Error(
-            `A 3-axis extent on a word used as a 2D-slice cell is not supported: <${resolved.extent.join(",")}>`,
+            `A 3-axis extent on a word used as a 2D-slice cell is not supported: <${resolved.extent.join(",")}>`
           );
         }
         const sub = flattenSlice2D(expanded, table, lookupModel, visited);
-        for (const b of sub.blocks) blocks.push({ word: b.word, u: uOffset + b.u, v: vOffset + b.v });
+        for (const b of sub.blocks)
+          blocks.push({ word: b.word, u: uOffset + b.u, v: vOffset + b.v });
         cellWidth = sub.width;
         cellHeight = sub.height;
       } else {
-        const content = resolveElement(lookupModel, table, resolved.name, visited);
+        const content = resolveElement(
+          lookupModel,
+          table,
+          resolved.name,
+          visited
+        );
         if (content === undefined) {
           // A dangling element reference (no `identify` statement defines
           // it) is valid notation -- see lib/notation/modules.ts's
@@ -129,14 +158,21 @@ function flattenSlice2D(
           // never fail on missing data" policy for unresolved words. The
           // reference example in CLAUDE.md exercises exactly this case
           // (`@@ ::= /@/`, with `/@/` never defined).
-          blocks.push({ word: danglingElementPlaceholderWord(resolved.name), u: uOffset, v: vOffset });
+          blocks.push({
+            word: danglingElementPlaceholderWord(resolved.name),
+            u: uOffset,
+            v: vOffset,
+          });
         } else if (content.kind !== "slice2d") {
-          throw new Error(`Element /${resolved.name}/ is a 3D stack and can't be embedded as a 2D-slice cell`);
+          throw new Error(
+            `Element /${resolved.name}/ is a 3D stack and can't be embedded as a 2D-slice cell`
+          );
         } else {
           const nextVisited = new Set(visited);
           nextVisited.add(resolved.name);
           const sub = flattenSlice2D(content, table, lookupModel, nextVisited);
-          for (const b of sub.blocks) blocks.push({ word: b.word, u: uOffset + b.u, v: vOffset + b.v });
+          for (const b of sub.blocks)
+            blocks.push({ word: b.word, u: uOffset + b.u, v: vOffset + b.v });
           cellWidth = sub.width;
           cellHeight = sub.height;
         }
@@ -157,7 +193,7 @@ function flattenStack3D(
   stack: Stack3D,
   table: ModuleTable,
   lookupModel: ModelLookup,
-  visited: ReadonlySet<string>,
+  visited: ReadonlySet<string>
 ): { blocks: LocalBlock3D[]; width: number; depth: number } {
   const blocks: LocalBlock3D[] = [];
   let width = 0;
@@ -166,10 +202,13 @@ function flattenStack3D(
   for (let w = 0; w < stack.slices.length; w++) {
     const slice = stack.slices[w];
     if (slice.kind !== "slice2d") {
-      throw new Error("A slice within a 3D stack must itself be a flat 2D slice (deeper nesting isn't supported)");
+      throw new Error(
+        "A slice within a 3D stack must itself be a flat 2D slice (deeper nesting isn't supported)"
+      );
     }
     const sub = flattenSlice2D(slice, table, lookupModel, visited);
-    for (const b of sub.blocks) blocks.push({ word: b.word, u: b.u, v: b.v, w });
+    for (const b of sub.blocks)
+      blocks.push({ word: b.word, u: b.u, v: b.v, w });
     width = Math.max(width, sub.width);
     depth = Math.max(depth, sub.height);
   }
@@ -188,13 +227,22 @@ export function placeModelInWorld(
   model: ModelContent,
   table: ModuleTable,
   lookupModel: ModelLookup,
-  visited: ReadonlySet<string> = new Set(),
+  visited: ReadonlySet<string> = new Set()
 ): PlacedWord[] {
   if (model.kind === "slice2d") {
-    const { blocks, height } = flattenSlice2D(model, table, lookupModel, visited);
+    const { blocks, height } = flattenSlice2D(
+      model,
+      table,
+      lookupModel,
+      visited
+    );
     return blocks.map((b) => ({
       word: b.word,
-      pos: [b.u, resolveWorldY(b.v, { kind: "row-in-2d-slice", rowCount: height }), 0] as const,
+      pos: [
+        b.u,
+        resolveWorldY(b.v, { kind: "row-in-2d-slice", rowCount: height }),
+        0,
+      ] as const,
     }));
   }
 

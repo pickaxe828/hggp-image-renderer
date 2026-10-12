@@ -16,17 +16,30 @@ describe("tokenizeGlyphRow", () => {
 
   it("splits a row of multi-byte glyphs without desync", () => {
     // Each of ░░ ▒▒ ██ is a single Unicode scalar value repeated twice.
-    expect(tokenizeGlyphRow("░░▒▒██", new Set(["░░", "▒▒", "██"]))).toEqual(["░░", "▒▒", "██"]);
+    expect(tokenizeGlyphRow("░░▒▒██", new Set(["░░", "▒▒", "██"]))).toEqual([
+      "░░",
+      "▒▒",
+      "██",
+    ]);
   });
 
   it("splits a mixed-width row (~w alongside 2-char glyphs) by code point pairs, not width", () => {
-    expect(tokenizeGlyphRow("~w~w░░", new Set(["~w", "░░"]))).toEqual(["~w", "~w", "░░"]);
+    expect(tokenizeGlyphRow("~w~w░░", new Set(["~w", "░░"]))).toEqual([
+      "~w",
+      "~w",
+      "░░",
+    ]);
   });
 
   it("splits a run of 1-character glyphs, not paired into 2s", () => {
     // "#@@#" with only "#" and "@" bound (both 1 char) -- must not be
     // mis-paired into "#@" "@#".
-    expect(tokenizeGlyphRow("#@@#", new Set(["#", "@"]))).toEqual(["#", "@", "@", "#"]);
+    expect(tokenizeGlyphRow("#@@#", new Set(["#", "@"]))).toEqual([
+      "#",
+      "@",
+      "@",
+      "#",
+    ]);
   });
 
   it("prefers the 2-char reading over the 1-char reading at the same position (maximal munch)", () => {
@@ -38,11 +51,17 @@ describe("tokenizeGlyphRow", () => {
   it("mixes 1-char and 2-char glyphs freely in the same run", () => {
     // "#" is 1 char, "~w" is 2 -- correctly told apart because "~w" is
     // bound and "#~" (the wrong pairing) is not.
-    expect(tokenizeGlyphRow("#~w#", new Set(["#", "~w"]))).toEqual(["#", "~w", "#"]);
+    expect(tokenizeGlyphRow("#~w#", new Set(["#", "~w"]))).toEqual([
+      "#",
+      "~w",
+      "#",
+    ]);
   });
 
   it("throws UndefinedGlyphError for a glyph nothing in scope defines", () => {
-    expect(() => tokenizeGlyphRow("??", new Set([".."]))).toThrow(UndefinedGlyphError);
+    expect(() => tokenizeGlyphRow("??", new Set([".."]))).toThrow(
+      UndefinedGlyphError
+    );
     expect(() => tokenizeGlyphRow("??", new Set([".."]))).toThrow(/\?\?/);
   });
 

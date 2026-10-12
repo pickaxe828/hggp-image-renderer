@@ -27,7 +27,11 @@ jobs:
 
       - run: bun install --frozen-lockfile
 
+      - run: bunx prettier --check .
+
       - run: bun run lint
+
+      - run: bun run typecheck
 
       - run: bun run test
 

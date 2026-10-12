@@ -1,5 +1,10 @@
 import { mergeModuleTable } from "@/lib/notation";
-import type { Document, ModelContent, ModelLookup, ModuleTable } from "@/lib/notation";
+import type {
+  Document,
+  ModelContent,
+  ModelLookup,
+  ModuleTable,
+} from "@/lib/notation";
 import { resolveBlock } from "@/lib/mapping/resolve";
 import type { Mapping } from "@/lib/mapping/types";
 import { placeModelInWorld } from "./place-model.ts";
@@ -53,7 +58,10 @@ export class NoRenderableModelError extends Error {
  * never enters `referencedElementNames`, and surfaces to callers as a
  * `PlacedScene` with `name: undefined`.
  */
-export function buildScenes(document: Document, mapping: Mapping | null | undefined): PlacedScene[] {
+export function buildScenes(
+  document: Document,
+  mapping: Mapping | null | undefined
+): PlacedScene[] {
   let table: ModuleTable = new Map();
   const models = new Map<string, ModelContent>();
   const modelTables = new Map<string, ModuleTable>();
@@ -67,7 +75,8 @@ export function buildScenes(document: Document, mapping: Mapping | null | undefi
     if (statement.kind === "module") {
       table = mergeModuleTable(table, statement.definitions);
       for (const definition of statement.definitions) {
-        if (definition.rhs.kind === "element") referencedElementNames.add(definition.rhs.name);
+        if (definition.rhs.kind === "element")
+          referencedElementNames.add(definition.rhs.name);
       }
     } else if (statement.kind === "identify") {
       const key = statement.elementName ?? `\0unnamed:${unnamedCounter++}`;
@@ -85,10 +94,14 @@ export function buildScenes(document: Document, mapping: Mapping | null | undefi
     }
   }
 
-  const rootKeys = rootOrder.filter((key) => unnamedKeys.has(key) || !referencedElementNames.has(key));
+  const rootKeys = rootOrder.filter(
+    (key) => unnamedKeys.has(key) || !referencedElementNames.has(key)
+  );
 
   if (rootKeys.length === 0) {
-    throw new NoRenderableModelError("Document defines no `[[ ]]` model to render.");
+    throw new NoRenderableModelError(
+      "Document defines no `[[ ]]` model to render."
+    );
   }
 
   const lookupModel: ModelLookup = (name) => models.get(name);
@@ -96,7 +109,12 @@ export function buildScenes(document: Document, mapping: Mapping | null | undefi
   return rootKeys.map((key) => {
     const model = models.get(key)!;
     const modelTable = modelTables.get(key)!;
-    const placedWords = placeModelInWorld(model, modelTable, lookupModel, new Set([key]));
+    const placedWords = placeModelInWorld(
+      model,
+      modelTable,
+      lookupModel,
+      new Set([key])
+    );
     return {
       name: unnamedKeys.has(key) ? undefined : key,
       blocks: placedWords.map((placedWord) => ({

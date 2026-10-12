@@ -46,12 +46,12 @@ You need two things installed globally:
 
 Everything else is installed from `package.json`. The main pieces:
 
-| Area | Packages |
-| --- | --- |
-| Build / dev server | [Vite](https://vite.dev/), TypeScript |
-| UI | [React](https://react.dev/) 19, [Tailwind CSS](https://tailwindcss.com/) v4, [shadcn/ui](https://ui.shadcn.com/) (Radix UI, `lucide-react`) |
-| Lint | [oxlint](https://oxc.rs/docs/guide/usage/linter) |
-| Tests | [Vitest](https://vitest.dev/), Testing Library, jsdom |
+| Area               | Packages                                                                                                                                    |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| Build / dev server | [Vite](https://vite.dev/), TypeScript                                                                                                       |
+| UI                 | [React](https://react.dev/) 19, [Tailwind CSS](https://tailwindcss.com/) v4, [shadcn/ui](https://ui.shadcn.com/) (Radix UI, `lucide-react`) |
+| Lint               | [oxlint](https://oxc.rs/docs/guide/usage/linter)                                                                                            |
+| Tests              | [Vitest](https://vitest.dev/), Testing Library, jsdom                                                                                       |
 
 The planned 3D layer,
 [block-model-renderer](https://github.com/ewanhowell5195/block-model-renderer)

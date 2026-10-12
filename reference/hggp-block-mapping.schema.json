@@ -12,7 +12,10 @@
     "words": {
       "type": "object",
       "description": "Exact hggp word (bracket contents, e.g. the 'x' in [x]) -> Minecraft block ID. Lookup is a flat exact-string match — no morphology is parsed or assumed at runtime.",
-      "additionalProperties": { "type": "string", "pattern": "^minecraft:[a-z0-9_]+$" }
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^minecraft:[a-z0-9_]+$"
+      }
     }
   }
 }

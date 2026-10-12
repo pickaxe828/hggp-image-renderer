@@ -49,7 +49,7 @@ class Parser {
         statements.push(this.parseEquivalenceStatement());
       } else {
         throw new Error(
-          `Unexpected content at position ${this.pos}: ${JSON.stringify(this.text.slice(this.pos, this.pos + 20))}`,
+          `Unexpected content at position ${this.pos}: ${JSON.stringify(this.text.slice(this.pos, this.pos + 20))}`
         );
       }
       this.skipWs();
@@ -101,12 +101,15 @@ class Parser {
       throw new Error(`Expected "::=" after glyph at position ${this.pos}`);
     }
     const codePoints = Array.from(this.text.slice(this.pos, eqIdx));
-    if (codePoints.length > 0 && WHITESPACE.test(codePoints[codePoints.length - 1])) {
+    if (
+      codePoints.length > 0 &&
+      WHITESPACE.test(codePoints[codePoints.length - 1])
+    ) {
       codePoints.pop();
     }
     if (codePoints.length !== 1 && codePoints.length !== 2) {
       throw new Error(
-        `Glyph must be 1 or 2 characters, got ${JSON.stringify(codePoints.join(""))} at position ${this.pos}`,
+        `Glyph must be 1 or 2 characters, got ${JSON.stringify(codePoints.join(""))} at position ${this.pos}`
       );
     }
     this.pos = eqIdx;
@@ -117,7 +120,7 @@ class Parser {
     if (this.peek("/")) return this.parseElementRef();
     if (this.peek("[")) return this.parseWordRef();
     throw new Error(
-      `Expected an element reference (/name/) or bracketed word ([word]) at position ${this.pos}: ${JSON.stringify(this.text.slice(this.pos, this.pos + 20))}`,
+      `Expected an element reference (/name/) or bracketed word ([word]) at position ${this.pos}: ${JSON.stringify(this.text.slice(this.pos, this.pos + 20))}`
     );
   }
 
@@ -138,11 +141,14 @@ class Parser {
     const candidates = [";", "---", "]]"]
       .map((token) => this.text.indexOf(token, this.pos))
       .filter((idx) => idx !== -1);
-    const boundary = candidates.length > 0 ? Math.min(...candidates) : this.text.length;
+    const boundary =
+      candidates.length > 0 ? Math.min(...candidates) : this.text.length;
     const window = this.text.slice(this.pos, boundary);
     const closeIdx = window.lastIndexOf("/");
     if (closeIdx === -1) {
-      throw new Error(`Unterminated element reference (missing closing /) at position ${this.pos}`);
+      throw new Error(
+        `Unterminated element reference (missing closing /) at position ${this.pos}`
+      );
     }
     const name = window.slice(0, closeIdx);
     this.pos += closeIdx + 1;
@@ -282,7 +288,7 @@ class Parser {
   private consumeLiteral(literal: string): void {
     if (!this.peek(literal)) {
       throw new Error(
-        `Expected "${literal}" at position ${this.pos}, found: ${JSON.stringify(this.text.slice(this.pos, this.pos + 20))}`,
+        `Expected "${literal}" at position ${this.pos}, found: ${JSON.stringify(this.text.slice(this.pos, this.pos + 20))}`
       );
     }
     this.pos += literal.length;
@@ -299,7 +305,10 @@ class Parser {
   }
 
   private skipWs(): void {
-    while (this.pos < this.text.length && WHITESPACE.test(this.text[this.pos])) {
+    while (
+      this.pos < this.text.length &&
+      WHITESPACE.test(this.text[this.pos])
+    ) {
       this.pos++;
     }
   }
@@ -345,15 +354,29 @@ function parseRowCells(rowText: string): Row {
   while (i < codePoints.length) {
     if (codePoints[i] === "[") {
       flushGlyphs();
-      const word = scanUntil(codePoints, i + 1, "]", `bracketed word in row: ${rowText}`);
+      const word = scanUntil(
+        codePoints,
+        i + 1,
+        "]",
+        `bracketed word in row: ${rowText}`
+      );
       i = word.next;
       let extent: Extent | undefined;
       if (codePoints[i] === "<") {
-        const body = scanUntil(codePoints, i + 1, ">", `extent in row: ${rowText}`);
+        const body = scanUntil(
+          codePoints,
+          i + 1,
+          ">",
+          `extent in row: ${rowText}`
+        );
         extent = parseExtentBody(body.content);
         i = body.next;
       }
-      cells.push(extent ? { kind: "word", word: word.content, extent } : { kind: "word", word: word.content });
+      cells.push(
+        extent
+          ? { kind: "word", word: word.content, extent }
+          : { kind: "word", word: word.content }
+      );
     } else {
       glyphBuffer.push(codePoints[i]);
       i++;
@@ -371,7 +394,7 @@ function scanUntil(
   codePoints: string[],
   start: number,
   closeChar: string,
-  what: string,
+  what: string
 ): { content: string; next: number } {
   let j = start;
   while (j < codePoints.length && codePoints[j] !== closeChar) j++;

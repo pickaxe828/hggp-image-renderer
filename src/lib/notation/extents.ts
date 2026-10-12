@@ -1,4 +1,11 @@
-import type { Cell, Extent, ModelContent, Row, Slice2D, WordRef } from "./ir.ts";
+import type {
+  Cell,
+  Extent,
+  ModelContent,
+  Row,
+  Slice2D,
+  WordRef,
+} from "./ir.ts";
 
 /**
  * Expands a word tiled by an extent into the corresponding cell grid.
@@ -15,7 +22,7 @@ import type { Cell, Extent, ModelContent, Row, Slice2D, WordRef } from "./ir.ts"
 export function expandExtent(word: WordRef, extent: Extent): ModelContent {
   if (extent.length < 1 || extent.length > 3) {
     throw new Error(
-      `Extent must have 1, 2, or 3 axes, got ${extent.length}: <${extent.join(",")}>`,
+      `Extent must have 1, 2, or 3 axes, got ${extent.length}: <${extent.join(",")}>`
     );
   }
 

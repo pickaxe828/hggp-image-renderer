@@ -1,6 +1,6 @@
-import { useState } from 'react'
-import { loadMapping } from './storage'
-import type { Mapping } from './types'
+import { useState } from "react";
+import { loadMapping } from "./storage";
+import type { Mapping } from "./types";
 
 /**
  * Loads any mapping previously persisted via ImportMapping, on mount.
@@ -8,6 +8,6 @@ import type { Mapping } from './types'
  * was corrupted) — never throws.
  */
 export function useStoredMapping(): Mapping | null {
-  const [mapping] = useState<Mapping | null>(() => loadMapping())
-  return mapping
+  const [mapping] = useState<Mapping | null>(() => loadMapping());
+  return mapping;
 }
