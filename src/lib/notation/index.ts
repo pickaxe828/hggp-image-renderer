@@ -1,5 +1,7 @@
 export type {
   Cell,
+  DirectionGlyph,
+  DirectionSpec,
   Document,
   ElementRef,
   Extent,

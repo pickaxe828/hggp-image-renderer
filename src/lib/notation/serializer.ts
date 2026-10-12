@@ -1,5 +1,6 @@
 import type {
   Cell,
+  DirectionSpec,
   Document,
   Extent,
   GlyphDefinition,
@@ -27,11 +28,29 @@ function serializeStatement(statement: Statement): string {
       return serializeModuleBlock(statement.definitions);
     case "identify":
       return statement.elementName === undefined
-        ? `${serializeModel(statement.model, "")};`
-        : `${serializeModel(statement.model, "")}:=/${statement.elementName}/;`;
+        ? `${serializeTopLevelModel(statement.model)};`
+        : `${serializeTopLevelModel(statement.model)}:=/${statement.elementName}/;`;
     case "equivalence":
-      return `${serializeWordRef(statement.word)} == ${serializeModel(statement.model, "")};`;
+      return `${serializeWordRef(statement.word)} == ${serializeTopLevelModel(statement.model)};`;
   }
+}
+
+/** A statement's outermost model, followed by its direction spec if the IR
+ * holds one. A spec is only ever re-emitted, never invented or dropped. */
+function serializeTopLevelModel(model: ModelContent): string {
+  const body = serializeModel(model, "");
+  return model.direction
+    ? `${body}${serializeDirectionSpec(model.direction)}`
+    : body;
+}
+
+/** Short form: no parentheses, trailing `_` entries dropped. */
+function serializeDirectionSpec(spec: DirectionSpec): string {
+  const entries = [spec.x, spec.y, spec.z, spec.t];
+  while (entries.length > 0 && entries[entries.length - 1] === "_") {
+    entries.pop();
+  }
+  return `</${entries.join("")}/>`;
 }
 
 function serializeModuleBlock(definitions: readonly GlyphDefinition[]): string {

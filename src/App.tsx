@@ -116,6 +116,19 @@ function App() {
                 {sceneError}
               </p>
             )}
+
+            {scenes?.flatMap((scene) =>
+              (scene.notices ?? []).map((notice) => (
+                <p
+                  key={`${scene.name ?? ""}:${notice}`}
+                  role="status"
+                  className="text-sm text-muted-foreground"
+                >
+                  {scene.name ? `/${scene.name}/: ` : ""}
+                  {notice}
+                </p>
+              ))
+            )}
           </div>
         </ResizablePanel>
 

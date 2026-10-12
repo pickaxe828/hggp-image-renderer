@@ -28,7 +28,7 @@ export class NoRenderableModelError extends Error {
  * statements define a sized word's model but aren't "a build" on their own,
  * so they're skipped here.
  *
- * WORKING ASSUMPTION, not specified anywhere in CLAUDE.md/issue #1: a
+ * PROVISIONAL DECISION, not specified anywhere in CLAUDE.md/issue #1: a
  * document may contain more than one `identify` statement, and earlier ones
  * are commonly reusable sub-components referenced by glyph (an `ElementRef`
  * module right-hand side) elsewhere in the document rather than builds in
@@ -109,7 +109,7 @@ export function buildScenes(
   return rootKeys.map((key) => {
     const model = models.get(key)!;
     const modelTable = modelTables.get(key)!;
-    const placedWords = placeModelInWorld(
+    const { words, notices } = placeModelInWorld(
       model,
       modelTable,
       lookupModel,
@@ -117,10 +117,11 @@ export function buildScenes(
     );
     return {
       name: unnamedKeys.has(key) ? undefined : key,
-      blocks: placedWords.map((placedWord) => ({
+      blocks: words.map((placedWord) => ({
         blockId: resolveBlock(placedWord.word, mapping),
         pos: placedWord.pos,
       })),
+      ...(notices.length > 0 ? { notices } : {}),
     };
   });
 }
