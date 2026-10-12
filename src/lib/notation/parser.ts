@@ -1,5 +1,7 @@
 import type {
   Cell,
+  DirectionGlyph,
+  DirectionSpec,
   Document,
   ElementRef,
   Extent,
@@ -188,7 +190,7 @@ class Parser {
 
   private parseIdentifyStatement(): IdentifyStatement {
     this.consumeLiteral("[[");
-    const model = this.parseModelContent();
+    const model = this.parseTopLevelModel();
     this.skipWs();
     // The `:= /name/` suffix is optional -- a model with no name to be
     // identified by is still a valid, renderable model, just an unnamed
@@ -211,10 +213,75 @@ class Parser {
     this.consumeLiteral("==");
     this.skipWs();
     this.consumeLiteral("[[");
-    const model = this.parseModelContent();
+    const model = this.parseTopLevelModel();
     this.skipWs();
     this.consumeTerminator();
     return { kind: "equivalence", word, model };
+  }
+
+  /** A statement's outermost model plus the direction spec that may follow
+   * its closing "]]". Nested `[[ ]]` never carry a spec of their own. */
+  private parseTopLevelModel(): ModelContent {
+    const model = this.parseModelContent();
+    const direction = this.parseDirectionSpec();
+    return direction ? { ...model, direction } : model;
+  }
+
+  /** Direction spec: `<` `(`? `/` entries `/` `)`? `>`, entered only from a
+   * "<" that directly follows a model's closing "]]". It has its own lexing
+   * path (rather than reusing `parseElementRef`) because `/>v+/` has the
+   * shape of an element reference but is not one. Entries are positional by
+   * world axis (X, Y, Z, T); missing trailing entries mean unused. */
+  private parseDirectionSpec(): DirectionSpec | undefined {
+    if (!this.peek("<")) return undefined;
+    const start = this.pos;
+    this.pos++;
+    const parenthesised = this.peek("(");
+    if (parenthesised) this.pos++;
+    if (!this.peek("/")) {
+      throw new Error(
+        `Malformed direction spec at position ${start}: expected "/" to open the entries`
+      );
+    }
+    this.pos++;
+    const entries: DirectionGlyph[] = [];
+    while (this.pos < this.text.length && !this.peek("/")) {
+      const ch = this.text[this.pos];
+      if (!isDirectionGlyph(ch)) {
+        throw new Error(
+          `Malformed direction spec at position ${start}: unknown entry ${JSON.stringify(ch)} (expected one of > < v ^ + - _)`
+        );
+      }
+      entries.push(ch);
+      this.pos++;
+    }
+    if (!this.peek("/")) {
+      throw new Error(
+        `Malformed direction spec at position ${start}: missing closing "/"`
+      );
+    }
+    this.pos++;
+    if (parenthesised) {
+      if (!this.peek(")")) {
+        throw new Error(
+          `Malformed direction spec at position ${start}: "(" without a matching ")"`
+        );
+      }
+      this.pos++;
+    }
+    if (!this.peek(">")) {
+      throw new Error(
+        `Malformed direction spec at position ${start}: expected ">" to close the spec`
+      );
+    }
+    this.pos++;
+    if (entries.length > 4) {
+      throw new Error(
+        `Malformed direction spec at position ${start}: at most 4 entries (X, Y, Z, T), got ${entries.length}`
+      );
+    }
+    const [x = "_", y = "_", z = "_", t = "_"] = entries;
+    return { x, y, z, t };
   }
 
   /** Called with `pos` positioned right after a consumed opening "[[". */
@@ -316,6 +383,12 @@ class Parser {
   private atEnd(): boolean {
     return this.pos >= this.text.length;
   }
+}
+
+const DIRECTION_GLYPHS: readonly string[] = [">", "<", "v", "^", "+", "-", "_"];
+
+function isDirectionGlyph(ch: string): ch is DirectionGlyph {
+  return DIRECTION_GLYPHS.includes(ch);
 }
 
 function parseExtentBody(body: string): Extent {

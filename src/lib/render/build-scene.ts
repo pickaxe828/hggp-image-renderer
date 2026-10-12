@@ -109,7 +109,7 @@ export function buildScenes(
   return rootKeys.map((key) => {
     const model = models.get(key)!;
     const modelTable = modelTables.get(key)!;
-    const placedWords = placeModelInWorld(
+    const { words, notices } = placeModelInWorld(
       model,
       modelTable,
       lookupModel,
@@ -117,10 +117,11 @@ export function buildScenes(
     );
     return {
       name: unnamedKeys.has(key) ? undefined : key,
-      blocks: placedWords.map((placedWord) => ({
+      blocks: words.map((placedWord) => ({
         blockId: resolveBlock(placedWord.word, mapping),
         pos: placedWord.pos,
       })),
+      ...(notices.length > 0 ? { notices } : {}),
     };
   });
 }

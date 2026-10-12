@@ -28,4 +28,8 @@ export interface PlacedBlock {
 export interface PlacedScene {
   readonly name: string | undefined;
   readonly blocks: readonly PlacedBlock[];
+  /** Things the viewer should tell the person about this scene -- e.g.
+   * that only the first of several time slices was rendered. Absent when
+   * there is nothing to say. */
+  readonly notices?: readonly string[];
 }

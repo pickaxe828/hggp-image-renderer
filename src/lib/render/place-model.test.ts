@@ -26,6 +26,10 @@ function stack3d(slices: ModelContent[]): Stack3D {
   return { kind: "stack3d", slices };
 }
 
+/** The placed words only; notices are covered at the build-scene seam. */
+const place = (...args: Parameters<typeof placeModelInWorld>) =>
+  placeModelInWorld(...args).words;
+
 const noGlyphs: ModuleTable = new Map();
 const noElements: ModelLookup = () => undefined;
 
@@ -40,7 +44,7 @@ describe("placeModelInWorld", () => {
         [word("bot-left"), word("bot-right")],
       ]);
 
-      const placed = placeModelInWorld(model, noGlyphs, noElements);
+      const placed = place(model, noGlyphs, noElements);
 
       expect(placed).toEqual(
         expect.arrayContaining([
@@ -61,7 +65,7 @@ describe("placeModelInWorld", () => {
       ]);
       const model = slice2d([[glyph("..")]]);
 
-      expect(placeModelInWorld(model, table, noElements)).toEqual([
+      expect(place(model, table, noElements)).toEqual([
         { word: "$air", pos: [0, 0, 0] },
       ]);
     });
@@ -80,7 +84,7 @@ describe("placeModelInWorld", () => {
       ]);
       const model = slice2d([[glyph("░░"), word("$solo")]]);
 
-      const placed = placeModelInWorld(model, table, noElements);
+      const placed = place(model, table, noElements);
 
       expect(placed).toEqual(
         expect.arrayContaining([
@@ -108,7 +112,7 @@ describe("placeModelInWorld", () => {
       ]);
       const model = slice2d([[glyph("@@"), word("$wall")]]);
 
-      const placed = placeModelInWorld(model, table, lookup);
+      const placed = place(model, table, lookup);
 
       // The door is 1 cell wide x 2 rows tall, so it (and the row it's
       // in) is 2 units tall overall. Its own top row is closer to the
@@ -127,9 +131,7 @@ describe("placeModelInWorld", () => {
 
     it("throws a clear error for a cell whose glyph is unbound", () => {
       const model = slice2d([[glyph("??")]]);
-      expect(() => placeModelInWorld(model, noGlyphs, noElements)).toThrow(
-        /\?\?/
-      );
+      expect(() => place(model, noGlyphs, noElements)).toThrow(/\?\?/);
     });
 
     it("degrades a cell referencing an element with no defining model to a placeholder, rather than failing the render", () => {
@@ -142,7 +144,7 @@ describe("placeModelInWorld", () => {
       ]);
       const model = slice2d([[glyph("@@"), word("$wall")]]);
 
-      const placed = placeModelInWorld(model, table, noElements);
+      const placed = place(model, table, noElements);
 
       expect(placed).toHaveLength(2);
       expect(placed).toContainEqual({ word: "$wall", pos: [1, 0, 0] });
@@ -162,31 +164,31 @@ describe("placeModelInWorld", () => {
         ["@a", { kind: "element", name: "a" }],
       ]);
 
-      expect(() =>
-        placeModelInWorld(modelA, table, lookup, new Set(["a"]))
-      ).toThrow(CycleError);
+      expect(() => place(modelA, table, lookup, new Set(["a"]))).toThrow(
+        CycleError
+      );
     });
   });
 
-  describe("a stack of XZ slices", () => {
-    it("places an asymmetric stack with slice 0 at Y=0 (ascending -- opposite direction from the 2D-slice row case)", () => {
+  describe("a stack of XY slices (the 3D default, >v+)", () => {
+    it("places an asymmetric stack with slice 0 at Z=0 and the top row of each slice highest", () => {
       const model = stack3d([
-        slice2d([[word("bottom-front")], [word("bottom-back")]]),
-        slice2d([[word("mid-front")], [word("mid-back")]]),
-        slice2d([[word("top-front")], [word("top-back")]]),
+        slice2d([[word("s0-top")], [word("s0-bottom")]]),
+        slice2d([[word("s1-top")], [word("s1-bottom")]]),
+        slice2d([[word("s2-top")], [word("s2-bottom")]]),
       ]);
 
-      const placed = placeModelInWorld(model, noGlyphs, noElements);
+      const placed = place(model, noGlyphs, noElements);
 
       expect(placed).toEqual(
         expect.arrayContaining([
-          // within-slice rows are Z, ascending; slice index is Y, ascending.
-          { word: "bottom-front", pos: [0, 0, 0] },
-          { word: "bottom-back", pos: [0, 0, 1] },
-          { word: "mid-front", pos: [0, 1, 0] },
-          { word: "mid-back", pos: [0, 1, 1] },
-          { word: "top-front", pos: [0, 2, 0] },
-          { word: "top-back", pos: [0, 2, 1] },
+          // rows fall going down (top row is Y=1); slice index is Z, ascending.
+          { word: "s0-top", pos: [0, 1, 0] },
+          { word: "s0-bottom", pos: [0, 0, 0] },
+          { word: "s1-top", pos: [0, 1, 1] },
+          { word: "s1-bottom", pos: [0, 0, 1] },
+          { word: "s2-top", pos: [0, 1, 2] },
+          { word: "s2-bottom", pos: [0, 0, 2] },
         ])
       );
       expect(placed).toHaveLength(6);

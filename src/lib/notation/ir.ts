@@ -72,19 +72,42 @@ export interface GlyphCell {
 
 export type Row = Cell[];
 
+/** One entry of a direction spec. `>` / `<` put a world axis on the
+ * row-axis (rising / falling to the right), `v` / `^` on the column-axis
+ * (falling / rising going down), `+` / `-` on the slice-axis (rising /
+ * falling with nesting order), `_` marks the world axis unused. */
+export type DirectionGlyph = ">" | "<" | "v" | "^" | "+" | "-" | "_";
+
+/** A model's direction spec: which signed text axis drives each world axis.
+ * Always fully populated -- entries the notation left out are `_` -- so
+ * `<(/>v+/)>` and `<(/>v+_/)>` parse to the same value. */
+export interface DirectionSpec {
+  readonly x: DirectionGlyph;
+  readonly y: DirectionGlyph;
+  readonly z: DirectionGlyph;
+  readonly t: DirectionGlyph;
+}
+
 /** The content of a `[[ ]]` model: either a flat 2D grid of cell rows, or a
  * stack of nested 2D grids (the third axis, expressed by nesting `[[ ]]`
- * inside `[[ ]]`). */
+ * inside `[[ ]]`).
+ *
+ * `direction` is the model's own direction spec, set only on the outermost
+ * `[[ ]]` of a statement's model. Absent means "no spec written" (the
+ * default for the model's nesting depth applies); an explicit spec equal to
+ * that default is still kept, so export can write back what the author wrote. */
 export type ModelContent = Slice2D | Stack3D;
 
 export interface Slice2D {
   readonly kind: "slice2d";
   readonly rows: Row[];
+  readonly direction?: DirectionSpec;
 }
 
 export interface Stack3D {
   readonly kind: "stack3d";
   readonly slices: ModelContent[];
+  readonly direction?: DirectionSpec;
 }
 
 /** `[[ ... ]] := /name/` -- identify: this model IS the existing element
