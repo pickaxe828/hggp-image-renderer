@@ -14,34 +14,35 @@
  * unzipping is done here.
  */
 
-const VERSION_MANIFEST_URL = 'https://piston-meta.mojang.com/mc/game/version_manifest_v2.json'
+const VERSION_MANIFEST_URL =
+  "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json";
 
 /** Cache API cache name the fetched client jar bytes are stored under. */
-export const MOJANG_ASSETS_CACHE_NAME = 'hggp-mojang-assets-v1'
+export const MOJANG_ASSETS_CACHE_NAME = "hggp-mojang-assets-v1";
 
 export interface MojangAssetsResult {
   /** Pass straight through as the `assets` arg to block-model-renderer's createScene/prepareAssets. */
-  assets: ArrayBuffer
+  assets: ArrayBuffer;
   /** The resolved Minecraft version id these assets are for, e.g. "1.21.4". */
-  versionId: string
+  versionId: string;
 }
 
 interface VersionManifestEntry {
-  id: string
-  type: string
-  url: string
-  sha1: string
+  id: string;
+  type: string;
+  url: string;
+  sha1: string;
 }
 
 interface VersionManifest {
-  latest: { release: string; snapshot: string }
-  versions: VersionManifestEntry[]
+  latest: { release: string; snapshot: string };
+  versions: VersionManifestEntry[];
 }
 
 interface VersionDetail {
   downloads: {
-    client: { url: string; sha1: string; size: number }
-  }
+    client: { url: string; sha1: string; size: number };
+  };
 }
 
 /**
@@ -53,56 +54,72 @@ interface VersionDetail {
  * names which step failed, distinguishing a load failure here from a
  * notation parse error for callers that need to display one or the other.
  */
-export async function loadMojangAssets(options?: { version?: string }): Promise<MojangAssetsResult> {
-  const manifest = await fetchVersionManifest()
+export async function loadMojangAssets(options?: {
+  version?: string;
+}): Promise<MojangAssetsResult> {
+  const manifest = await fetchVersionManifest();
 
-  const requestedVersion = options?.version
-  const versionId = requestedVersion ?? manifest.latest.release
-  const versionEntry = manifest.versions.find((v) => v.id === versionId)
+  const requestedVersion = options?.version;
+  const versionId = requestedVersion ?? manifest.latest.release;
+  const versionEntry = manifest.versions.find((v) => v.id === versionId);
   if (!versionEntry) {
-    throw new Error(`Unknown Minecraft version "${versionId}" (not in version manifest)`)
+    throw new Error(
+      `Unknown Minecraft version "${versionId}" (not in version manifest)`
+    );
   }
 
-  const versionDetail = await fetchVersionDetail(versionEntry)
-  const clientUrl = versionDetail.downloads.client.url
-  const assets = await fetchClientJar(clientUrl, versionId)
+  const versionDetail = await fetchVersionDetail(versionEntry);
+  const clientUrl = versionDetail.downloads.client.url;
+  const assets = await fetchClientJar(clientUrl, versionId);
 
-  return { assets, versionId }
+  return { assets, versionId };
 }
 
 async function fetchVersionManifest(): Promise<VersionManifest> {
-  let response: Response
+  let response: Response;
   try {
-    response = await fetch(VERSION_MANIFEST_URL)
+    response = await fetch(VERSION_MANIFEST_URL);
   } catch (cause) {
-    throw new Error(`Failed to fetch Minecraft version manifest: ${errorMessage(cause)}`)
-  }
-  if (!response.ok) {
-    throw new Error(`Failed to fetch Minecraft version manifest: ${response.status} ${response.statusText}`)
-  }
-  try {
-    return (await response.json()) as VersionManifest
-  } catch (cause) {
-    throw new Error(`Failed to fetch Minecraft version manifest: ${errorMessage(cause)}`)
-  }
-}
-
-async function fetchVersionDetail(entry: VersionManifestEntry): Promise<VersionDetail> {
-  let response: Response
-  try {
-    response = await fetch(entry.url)
-  } catch (cause) {
-    throw new Error(`Failed to fetch Minecraft version detail for version ${entry.id}: ${errorMessage(cause)}`)
+    throw new Error(
+      `Failed to fetch Minecraft version manifest: ${errorMessage(cause)}`
+    );
   }
   if (!response.ok) {
     throw new Error(
-      `Failed to fetch Minecraft version detail for version ${entry.id}: ${response.status} ${response.statusText}`,
-    )
+      `Failed to fetch Minecraft version manifest: ${response.status} ${response.statusText}`
+    );
   }
   try {
-    return (await response.json()) as VersionDetail
+    return (await response.json()) as VersionManifest;
   } catch (cause) {
-    throw new Error(`Failed to fetch Minecraft version detail for version ${entry.id}: ${errorMessage(cause)}`)
+    throw new Error(
+      `Failed to fetch Minecraft version manifest: ${errorMessage(cause)}`
+    );
+  }
+}
+
+async function fetchVersionDetail(
+  entry: VersionManifestEntry
+): Promise<VersionDetail> {
+  let response: Response;
+  try {
+    response = await fetch(entry.url);
+  } catch (cause) {
+    throw new Error(
+      `Failed to fetch Minecraft version detail for version ${entry.id}: ${errorMessage(cause)}`
+    );
+  }
+  if (!response.ok) {
+    throw new Error(
+      `Failed to fetch Minecraft version detail for version ${entry.id}: ${response.status} ${response.statusText}`
+    );
+  }
+  try {
+    return (await response.json()) as VersionDetail;
+  } catch (cause) {
+    throw new Error(
+      `Failed to fetch Minecraft version detail for version ${entry.id}: ${errorMessage(cause)}`
+    );
   }
 }
 
@@ -113,29 +130,39 @@ async function fetchVersionDetail(entry: VersionManifestEntry): Promise<VersionD
  * without the Cache API), and never lets a caching failure fail the load —
  * it falls back to the bytes it already fetched.
  */
-async function fetchClientJar(url: string, versionId: string): Promise<ArrayBuffer> {
-  const cache = typeof caches !== 'undefined' ? await caches.open(MOJANG_ASSETS_CACHE_NAME).catch(() => null) : null
+async function fetchClientJar(
+  url: string,
+  versionId: string
+): Promise<ArrayBuffer> {
+  const cache =
+    typeof caches !== "undefined"
+      ? await caches.open(MOJANG_ASSETS_CACHE_NAME).catch(() => null)
+      : null;
 
   if (cache) {
-    const cached = await cache.match(url).catch(() => undefined)
+    const cached = await cache.match(url).catch(() => undefined);
     if (cached) {
-      return cached.arrayBuffer()
+      return cached.arrayBuffer();
     }
   }
 
-  let response: Response
+  let response: Response;
   try {
-    response = await fetch(url)
+    response = await fetch(url);
   } catch (cause) {
-    throw new Error(`Failed to fetch client jar for version ${versionId}: ${errorMessage(cause)}`)
+    throw new Error(
+      `Failed to fetch client jar for version ${versionId}: ${errorMessage(cause)}`
+    );
   }
   if (!response.ok) {
-    throw new Error(`Failed to fetch client jar for version ${versionId}: ${response.status} ${response.statusText}`)
+    throw new Error(
+      `Failed to fetch client jar for version ${versionId}: ${response.status} ${response.statusText}`
+    );
   }
 
   if (cache) {
     try {
-      await cache.put(url, response.clone())
+      await cache.put(url, response.clone());
     } catch {
       // Caching is a best-effort optimization (e.g. quota exceeded on a
       // ~20MB+ entry); fall through to using the already-fetched bytes.
@@ -143,12 +170,14 @@ async function fetchClientJar(url: string, versionId: string): Promise<ArrayBuff
   }
 
   try {
-    return await response.arrayBuffer()
+    return await response.arrayBuffer();
   } catch (cause) {
-    throw new Error(`Failed to fetch client jar for version ${versionId}: ${errorMessage(cause)}`)
+    throw new Error(
+      `Failed to fetch client jar for version ${versionId}: ${errorMessage(cause)}`
+    );
   }
 }
 
 function errorMessage(cause: unknown): string {
-  return cause instanceof Error ? cause.message : String(cause)
+  return cause instanceof Error ? cause.message : String(cause);
 }

@@ -1,13 +1,14 @@
-import type { Mapping } from './types'
+import type { Mapping } from "./types";
 
-export type ValidateMappingResult = { ok: true; mapping: Mapping } | { ok: false; error: string }
+export type ValidateMappingResult =
+  { ok: true; mapping: Mapping } | { ok: false; error: string };
 
 // Keep in sync with the `words` pattern in
 // reference/hggp-block-mapping.schema.json.
-const BLOCK_ID_PATTERN = /^minecraft:[a-z0-9_]+$/
+const BLOCK_ID_PATTERN = /^minecraft:[a-z0-9_]+$/;
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 /**
@@ -17,27 +18,34 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
  */
 export function validateMapping(data: unknown): ValidateMappingResult {
   if (!isPlainObject(data)) {
-    return { ok: false, error: 'Mapping must be a JSON object.' }
+    return { ok: false, error: "Mapping must be a JSON object." };
   }
 
-  const { version, words } = data
+  const { version, words } = data;
 
-  if (typeof version !== 'number' || !Number.isInteger(version)) {
-    return { ok: false, error: '"version" must be an integer.' }
+  if (typeof version !== "number" || !Number.isInteger(version)) {
+    return { ok: false, error: '"version" must be an integer.' };
   }
 
   if (!isPlainObject(words)) {
-    return { ok: false, error: '"words" must be an object mapping hggp words to Minecraft block ids.' }
+    return {
+      ok: false,
+      error:
+        '"words" must be an object mapping hggp words to Minecraft block ids.',
+    };
   }
 
   for (const [word, blockId] of Object.entries(words)) {
-    if (typeof blockId !== 'string' || !BLOCK_ID_PATTERN.test(blockId)) {
+    if (typeof blockId !== "string" || !BLOCK_ID_PATTERN.test(blockId)) {
       return {
         ok: false,
         error: `"words.${word}" must be a Minecraft block id matching ^minecraft:[a-z0-9_]+$ (got ${JSON.stringify(blockId)}).`,
-      }
+      };
     }
   }
 
-  return { ok: true, mapping: { version, words: words as Record<string, string> } }
+  return {
+    ok: true,
+    mapping: { version, words: words as Record<string, string> },
+  };
 }

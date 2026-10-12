@@ -38,8 +38,12 @@ describe("buildScenes", () => {
     expect(scenes).toHaveLength(1);
     const [{ blocks }] = scenes;
     expect(blocks).toHaveLength(12); // 3 rows x 4 cols, one block per cell
-    expect(blocks.filter((b) => b.blockId === "minecraft:nether_portal")).toHaveLength(2);
-    expect(blocks.filter((b) => b.blockId === "minecraft:obsidian")).toHaveLength(10);
+    expect(
+      blocks.filter((b) => b.blockId === "minecraft:nether_portal")
+    ).toHaveLength(2);
+    expect(
+      blocks.filter((b) => b.blockId === "minecraft:obsidian")
+    ).toHaveLength(10);
   });
 
   it("renders the CLAUDE.md reference example end to end, resolving blocks per cell", () => {
@@ -70,22 +74,34 @@ describe("buildScenes", () => {
     expect(placed).toHaveLength(5 * 64 + 1 + 6 * 64);
     // Row 0 of text is the *top* -- world Y 8..15 for its resolved
     // (8-tall) cells.
-    expect(placed).toContainEqual({ blockId: "minecraft:stone", pos: [0, 15, 0] });
+    expect(placed).toContainEqual({
+      blockId: "minecraft:stone",
+      pos: [0, 15, 0],
+    });
     // Row 1 of text is the bottom -- world Y 0..7.
-    expect(placed).toContainEqual({ blockId: "minecraft:dirt", pos: [0, 0, 0] });
+    expect(placed).toContainEqual({
+      blockId: "minecraft:dirt",
+      pos: [0, 0, 0],
+    });
     // Exactly the dangling /@/ cell is left unresolved.
-    expect(placed.filter((b) => b.blockId === UNRESOLVED_BLOCK)).toHaveLength(1);
+    expect(placed.filter((b) => b.blockId === UNRESOLVED_BLOCK)).toHaveLength(
+      1
+    );
   });
 
   it("resolves an unmapped word to the placeholder sentinel instead of throwing", () => {
     const doc = parseDocument(`[[ [$unknown-word] ]]:=/X/;`);
     const scenes = buildScenes(doc, mapping);
-    expect(scenes).toEqual([{ name: "X", blocks: [{ blockId: UNRESOLVED_BLOCK, pos: [0, 0, 0] }] }]);
+    expect(scenes).toEqual([
+      { name: "X", blocks: [{ blockId: UNRESOLVED_BLOCK, pos: [0, 0, 0] }] },
+    ]);
   });
 
   it("resolves every block to the placeholder sentinel when no mapping is loaded", () => {
     const doc = parseDocument(`[[ [$_] ]]:=/X/;`);
-    expect(buildScenes(doc, null)).toEqual([{ name: "X", blocks: [{ blockId: UNRESOLVED_BLOCK, pos: [0, 0, 0] }] }]);
+    expect(buildScenes(doc, null)).toEqual([
+      { name: "X", blocks: [{ blockId: UNRESOLVED_BLOCK, pos: [0, 0, 0] }] },
+    ]);
     expect(buildScenes(doc, undefined)).toEqual([
       { name: "X", blocks: [{ blockId: UNRESOLVED_BLOCK, pos: [0, 0, 0] }] },
     ]);
@@ -99,7 +115,9 @@ describe("buildScenes", () => {
 `);
     const scenes = buildScenes(doc, mapping);
     expect(scenes.map((s) => s.name)).toEqual(["first", "second"]);
-    expect(scenes[0].blocks).toEqual([{ blockId: "minecraft:stone", pos: [0, 0, 0] }]);
+    expect(scenes[0].blocks).toEqual([
+      { blockId: "minecraft:stone", pos: [0, 0, 0] },
+    ]);
     expect(scenes[1].blocks).toEqual([
       { blockId: "minecraft:dirt", pos: [0, 0, 0] },
       { blockId: "minecraft:dirt", pos: [1, 0, 0] },
@@ -147,8 +165,12 @@ describe("buildScenes", () => {
 `);
     const scenes = buildScenes(doc, mapping);
     expect(scenes.map((s) => s.name)).toEqual(["first", "second"]);
-    expect(scenes[0].blocks).toEqual([{ blockId: "minecraft:stone", pos: [0, 0, 0] }]);
-    expect(scenes[1].blocks).toEqual([{ blockId: "minecraft:dirt", pos: [0, 0, 0] }]);
+    expect(scenes[0].blocks).toEqual([
+      { blockId: "minecraft:stone", pos: [0, 0, 0] },
+    ]);
+    expect(scenes[1].blocks).toEqual([
+      { blockId: "minecraft:dirt", pos: [0, 0, 0] },
+    ]);
   });
 
   it("treats an unnamed identify statement (no `:=/name/;`) as always its own scene, in document order alongside named ones", () => {
@@ -159,7 +181,9 @@ describe("buildScenes", () => {
 `);
     const scenes = buildScenes(doc, mapping);
     expect(scenes.map((s) => s.name)).toEqual([undefined, "second"]);
-    expect(scenes[0].blocks).toEqual([{ blockId: "minecraft:stone", pos: [0, 0, 0] }]);
+    expect(scenes[0].blocks).toEqual([
+      { blockId: "minecraft:stone", pos: [0, 0, 0] },
+    ]);
     expect(scenes[1].blocks).toEqual([
       { blockId: "minecraft:dirt", pos: [0, 0, 0] },
       { blockId: "minecraft:dirt", pos: [1, 0, 0] },
@@ -175,8 +199,12 @@ describe("buildScenes", () => {
     const scenes = buildScenes(doc, mapping);
     expect(scenes).toHaveLength(2);
     expect(scenes.map((s) => s.name)).toEqual([undefined, undefined]);
-    expect(scenes[0].blocks).toEqual([{ blockId: "minecraft:stone", pos: [0, 0, 0] }]);
-    expect(scenes[1].blocks).toEqual([{ blockId: "minecraft:dirt", pos: [0, 0, 0] }]);
+    expect(scenes[0].blocks).toEqual([
+      { blockId: "minecraft:stone", pos: [0, 0, 0] },
+    ]);
+    expect(scenes[1].blocks).toEqual([
+      { blockId: "minecraft:dirt", pos: [0, 0, 0] },
+    ]);
   });
 
   it("throws NoRenderableModelError when the document defines no identify statement", () => {

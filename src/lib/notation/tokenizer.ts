@@ -19,12 +19,16 @@ import type { Glyph } from "./ir.ts";
  * with ASCII (e.g. "~w"). Splitting must iterate code points -- never
  * bytes or UTF-16 code units -- or multi-byte glyphs desynchronize.
  */
-export function tokenizeGlyphRow(row: string, definedGlyphs: ReadonlySet<Glyph>): string[] {
+export function tokenizeGlyphRow(
+  row: string,
+  definedGlyphs: ReadonlySet<Glyph>
+): string[] {
   const codePoints = Array.from(row);
   const cells: string[] = [];
   let i = 0;
   while (i < codePoints.length) {
-    const two = i + 1 < codePoints.length ? codePoints[i] + codePoints[i + 1] : undefined;
+    const two =
+      i + 1 < codePoints.length ? codePoints[i] + codePoints[i + 1] : undefined;
     if (two !== undefined && definedGlyphs.has(two)) {
       cells.push(two);
       i += 2;

@@ -58,7 +58,9 @@ describe("parseDocument", () => {
   });
 
   it("throws a clear error for a glyph definition that's neither 1 nor 2 characters", () => {
-    expect(() => parseDocument(`--- \n### ::= [$_];\n---\n`)).toThrow(/1 or 2 characters/);
+    expect(() => parseDocument(`--- \n### ::= [$_];\n---\n`)).toThrow(
+      /1 or 2 characters/
+    );
   });
 
   it("parses a 2D block model into an identify statement, accepting glyph and bracketed-word cells in the same model", () => {
@@ -110,8 +112,12 @@ describe("parseDocument", () => {
     expect(model.model.rows).toHaveLength(2);
     // Each row has no bracketed words at all, so it's one uninterrupted
     // run -- splitting into individual glyphs is deferred (see above).
-    expect(model.model.rows[0]).toEqual([{ kind: "glyph", text: "......@@...." }]);
-    expect(model.model.rows[1]).toEqual([{ kind: "glyph", text: "████████████" }]);
+    expect(model.model.rows[0]).toEqual([
+      { kind: "glyph", text: "......@@...." },
+    ]);
+    expect(model.model.rows[1]).toEqual([
+      { kind: "glyph", text: "████████████" },
+    ]);
   });
 
   it("parses an equivalence statement with a 1-D extent", () => {

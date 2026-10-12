@@ -3,7 +3,10 @@ import type { PlacedScene } from "./types.ts";
 import { SCENE_STACK_GAP, stackScenesVertically } from "./stack-scenes.ts";
 
 function scene(name: string, ys: number[]): PlacedScene {
-  return { name, blocks: ys.map((y) => ({ blockId: `block-${y}`, pos: [0, y, 0] as const })) };
+  return {
+    name,
+    blocks: ys.map((y) => ({ blockId: `block-${y}`, pos: [0, y, 0] as const })),
+  };
 }
 
 describe("stackScenesVertically", () => {
@@ -16,11 +19,16 @@ describe("stackScenesVertically", () => {
     const positions = result.map((b) => b.pos);
     expect(Math.max(...positions.map((p) => p[1]))).toBe(0);
     // Relative spacing within the scene is preserved.
-    expect(positions.map((p) => p[1]).sort((a, b) => a - b)).toEqual([-2, -1, 0]);
+    expect(positions.map((p) => p[1]).sort((a, b) => a - b)).toEqual([
+      -2, -1, 0,
+    ]);
   });
 
   it("stacks two scenes with exactly the configured gap of clear air between them", () => {
-    const result = stackScenesVertically([scene("top", [0, 1, 2]), scene("bottom", [0, 1])]);
+    const result = stackScenesVertically([
+      scene("top", [0, 1, 2]),
+      scene("bottom", [0, 1]),
+    ]);
 
     const ysByScene = {
       top: result.slice(0, 3).map((b) => b.pos[1]),
@@ -33,7 +41,9 @@ describe("stackScenesVertically", () => {
     // Air blocks strictly between the two scenes.
     expect(topBottomEdge - bottomTopEdge - 1).toBe(SCENE_STACK_GAP);
     // First scene renders highest (document order == top-to-bottom).
-    expect(Math.min(...ysByScene.top)).toBeGreaterThan(Math.max(...ysByScene.bottom));
+    expect(Math.min(...ysByScene.top)).toBeGreaterThan(
+      Math.max(...ysByScene.bottom)
+    );
   });
 
   it("preserves each scene's own X/Z footprint, shifting only Y", () => {
@@ -49,7 +59,11 @@ describe("stackScenesVertically", () => {
   });
 
   it("skips scenes with no blocks and doesn't reserve a gap for them", () => {
-    const result = stackScenesVertically([scene("a", [0]), { name: "empty", blocks: [] }, scene("b", [0])]);
+    const result = stackScenesVertically([
+      scene("a", [0]),
+      { name: "empty", blocks: [] },
+      scene("b", [0]),
+    ]);
     const [first, second] = result;
     expect(first.pos[1] - second.pos[1] - 1).toBe(SCENE_STACK_GAP);
   });

@@ -25,6 +25,7 @@ A renderer for the 2D/3D Minecraft-build notation of **#>>+ (hggp) v2**, a const
 Target is a **web app**, 3D, built around a voxel view of hggp build notation.
 
 **Stage 1**
+
 - 3D rendering of the parsed model, showing Minecraft blocks with textures
 - Interactive camera: pan, orbit, zoom
 - Import and export of hggp notation
@@ -32,6 +33,7 @@ Target is a **web app**, 3D, built around a voxel view of hggp build notation.
 - Model state compressed into the URL so a view is shareable by link
 
 **Stage 2**
+
 - Editing the model directly in 3D
 
 **Soft requirement (all stages):** run smoothly on mobile browsers, not just desktop. Not a hard blocker, but weigh it when picking rendering libraries/approaches — e.g. a mid/low-end Android phone (tested reference point: Galaxy A35 5G, Chrome) should stay usable.
@@ -40,7 +42,7 @@ Target is a **web app**, 3D, built around a voxel view of hggp build notation.
 
 These are stage-1 decisions that stage 2 cannot undo cheaply:
 
-- **Export must regenerate hggp notation from the in-memory model, not echo the imported text.** 3D editing (stage 2) means the model becomes the source of truth and the notation has to be re-emitted from it — including inventing modules and glyphs for the blocks in use. Build the IR so it can round-trip *notation → IR → notation* from day one, and test that round-trip early. Retrofitting this after a render-only IR is a rewrite.
+- **Export must regenerate hggp notation from the in-memory model, not echo the imported text.** 3D editing (stage 2) means the model becomes the source of truth and the notation has to be re-emitted from it — including inventing modules and glyphs for the blocks in use. Build the IR so it can round-trip _notation → IR → notation_ from day one, and test that round-trip early. Retrofitting this after a render-only IR is a rewrite.
 - **Put the source text in the URL, not the voxel grid.** The notation is already a compression format — glyph substitution plus extents encode large regions in a few characters — so serializing expanded voxels throws that away and blows the budget. Compress the notation (e.g. DEFLATE + base64url) and keep it in the **fragment** (`#…`), which is never sent to a server and avoids URL-length limits that apply to query strings. Expect link-sharing surfaces to truncate long URLs regardless; treat very large models as export-to-file, not shareable-by-link, rather than silently producing a broken link.
 - **The grammar panel and the 3D view are two views of one IR.** Decide early whether the panel is read-only or an editable source-of-truth; if editable, it needs live re-parse and the same IR round-trip as above. Read-only in stage 1 is a reasonable cut, but do not build it as a separate code path that stage 2 has to replace.
 
@@ -83,16 +85,16 @@ out of devtools/git history instead of solving it.
   hggp's word-formation rules, only the finished words that appear in real
   notation) and what keeps any compositional/morphological pattern out of
   app source, where it would double as a spoiler.
-- General notation *parsing* (tokenizing glyph rows, module substitution,
+- General notation _parsing_ (tokenizing glyph rows, module substitution,
   extents, grammar) is not spoiler content and is fine to hardcode — only
-  the finished word → block *answers* are sensitive.
+  the finished word → block _answers_ are sensitive.
 
 **The same rule covers the dictionary sheet itself, its CSV exports, and any
 notes derived from them** (including the sheet's structure, tab/filter names,
 and refetch commands). The sheet's sharing settings are public; that does not
 make it publishable here. Keep all of it under gitignored `private/` — never
-in a tracked file or in git history. Only the notation *parser* and the
-mapping *schema* (`reference/hggp-block-mapping.schema.json`) are tracked.
+in a tracked file or in git history. Only the notation _parser_ and the
+mapping _schema_ (`reference/hggp-block-mapping.schema.json`) are tracked.
 Local notes live in `private/hggp-block-mapping.md` and
 `private/dictionary-source.md`.
 
@@ -133,15 +135,15 @@ A document interleaves **modules** (the `---`-delimited legends) and **2D block 
 
 ### Operators
 
-- **`::=` is *definition*** — introduces something new into the temporary context. This is what a module does for each glyph.
-- **`:=` is *identify*** — explains something that already exists in the language. So `]]:=/C/` does not name a new model; it states that the model depicts the existing element `/C/`.
-- **`==` is *equivalence*** — states that a sized word and an explicit model are the same thing (see Extents below).
+- **`::=` is _definition_** — introduces something new into the temporary context. This is what a module does for each glyph.
+- **`:=` is _identify_** — explains something that already exists in the language. So `]]:=/C/` does not name a new model; it states that the model depicts the existing element `/C/`.
+- **`==` is _equivalence_** — states that a sized word and an explicit model are the same thing (see Extents below).
 
 Keep all three distinct in the AST. They are not spellings of one thing.
 
 ### Blocks and words
 
-`[...]` encloses a Minecraft block. It is **not** a part-of-speech tag — `[%]` is itself the hggp *word* for "Minecraft block" (the noun naming that part of speech, the way 動詞 is the word for "verb"), with `%` reading as a placeholder. So `[$_]`, `[@0]`, `[!<$]` are blocks; `[%]` is the word "block".
+`[...]` encloses a Minecraft block. It is **not** a part-of-speech tag — `[%]` is itself the hggp _word_ for "Minecraft block" (the noun naming that part of speech, the way 動詞 is the word for "verb"), with `%` reading as a placeholder. So `[$_]`, `[@0]`, `[!<$]` are blocks; `[%]` is the word "block".
 
 Words seen: `$_`, `$..`, `$##`, `$~~`, `$#w`, `$xw`, `$~w`, `$#w~`, `$#_`, `!<$`, `@0`. Do not infer meaning from their shape — look them up.
 
@@ -233,6 +235,7 @@ Default canonical labels used as-is (`needs-triage`, `needs-info`, `ready-for-ag
 Single-context: `CONTEXT.md` + `docs/adr/` at the repo root. See `docs/agents/domain.md`.
 
 <!-- rtk-instructions v2 -->
+
 # RTK (Rust Token Killer) - Token-Optimized Commands
 
 ## Golden Rule
@@ -240,6 +243,7 @@ Single-context: `CONTEXT.md` + `docs/adr/` at the repo root. See `docs/agents/do
 **Always prefix commands with `rtk`**. If RTK has a dedicated filter, it uses it. If not, it passes through unchanged. This means RTK is always safe to use.
 
 **Important**: Even in command chains with `&&`, use `rtk`:
+
 ```bash
 # ❌ Wrong
 git add . && git commit -m "msg" && git push
@@ -251,6 +255,7 @@ rtk git add . && rtk git commit -m "msg" && rtk git push
 ## RTK Commands by Workflow
 
 ### Build & Compile (80-90% savings)
+
 ```bash
 rtk cargo build         # Cargo build output
 rtk cargo check         # Cargo check output
@@ -262,6 +267,7 @@ rtk next build          # Next.js build with route metrics (87%)
 ```
 
 ### Test (60-99% savings)
+
 ```bash
 rtk cargo test          # Cargo test failures only (90%)
 rtk go test             # Go test failures only (90%)
@@ -275,6 +281,7 @@ rtk test <cmd>          # Generic test wrapper - failures only
 ```
 
 ### Git (59-80% savings)
+
 ```bash
 rtk git status          # Compact status
 rtk git log             # Compact log (works with all git flags)
@@ -293,6 +300,7 @@ rtk git worktree        # Compact worktree
 Note: Git passthrough works for ALL subcommands, even those not explicitly listed.
 
 ### GitHub (26-87% savings)
+
 ```bash
 rtk gh pr view <num>    # Compact PR view (87%)
 rtk gh pr checks        # Compact PR checks (79%)
@@ -302,6 +310,7 @@ rtk gh api              # Compact API responses (26%)
 ```
 
 ### JavaScript/TypeScript Tooling (70-90% savings)
+
 ```bash
 rtk pnpm list           # Compact dependency tree (70%)
 rtk pnpm outdated       # Compact outdated packages (80%)
@@ -312,6 +321,7 @@ rtk prisma              # Prisma without ASCII art (88%)
 ```
 
 ### Files & Search (60-75% savings)
+
 ```bash
 rtk ls <path>           # Tree format, compact (65%)
 rtk read <file>         # Code reading with filtering (60%)
@@ -320,6 +330,7 @@ rtk find <pattern>      # Find grouped by directory (70%)
 ```
 
 ### Analysis & Debug (70-90% savings)
+
 ```bash
 rtk err <cmd>           # Filter errors only from any command
 rtk log <file>          # Deduplicated logs with counts
@@ -331,6 +342,7 @@ rtk diff                # Ultra-compact diffs
 ```
 
 ### Infrastructure (85% savings)
+
 ```bash
 rtk docker ps           # Compact container list
 rtk docker images       # Compact image list
@@ -340,12 +352,14 @@ rtk kubectl logs        # Deduplicated pod logs
 ```
 
 ### Network (65-70% savings)
+
 ```bash
 rtk curl <url>          # Compact HTTP responses (70%)
 rtk wget <url>          # Compact download output (65%)
 ```
 
 ### Meta Commands
+
 ```bash
 rtk gain                # View token savings statistics
 rtk gain --history      # View command history with savings
@@ -357,16 +371,16 @@ rtk init --global       # Add RTK to ~/.claude/CLAUDE.md
 
 ## Token Savings Overview
 
-| Category | Commands | Typical Savings |
-|----------|----------|-----------------|
-| Tests | vitest, playwright, cargo test | 90-99% |
-| Build | next, tsc, lint, prettier | 70-87% |
-| Git | status, log, diff, add, commit | 59-80% |
-| GitHub | gh pr, gh run, gh issue | 26-87% |
-| Package Managers | pnpm, npm, npx | 70-90% |
-| Files | ls, read, grep, find | 60-75% |
-| Infrastructure | docker, kubectl | 85% |
-| Network | curl, wget | 65-70% |
+| Category         | Commands                       | Typical Savings |
+| ---------------- | ------------------------------ | --------------- |
+| Tests            | vitest, playwright, cargo test | 90-99%          |
+| Build            | next, tsc, lint, prettier      | 70-87%          |
+| Git              | status, log, diff, add, commit | 59-80%          |
+| GitHub           | gh pr, gh run, gh issue        | 26-87%          |
+| Package Managers | pnpm, npm, npx                 | 70-90%          |
+| Files            | ls, read, grep, find           | 60-75%          |
+| Infrastructure   | docker, kubectl                | 85%             |
+| Network          | curl, wget                     | 65-70%          |
 
 Overall average: **60-90% token reduction** on common development operations.
 <!-- /rtk-instructions -->

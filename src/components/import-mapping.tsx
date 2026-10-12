@@ -1,17 +1,17 @@
-import { useState } from 'react'
-import type { ChangeEvent } from 'react'
-import { Button } from '@/components/ui/button'
-import { validateMapping } from '@/lib/mapping/validate'
-import { loadMapping, saveMapping } from '@/lib/mapping/storage'
-import type { Mapping } from '@/lib/mapping/types'
+import { useState } from "react";
+import type { ChangeEvent } from "react";
+import { Button } from "@/components/ui/button";
+import { validateMapping } from "@/lib/mapping/validate";
+import { loadMapping, saveMapping } from "@/lib/mapping/storage";
+import type { Mapping } from "@/lib/mapping/types";
 
 export interface ImportMappingProps {
-  onImport: (mapping: Mapping) => void
+  onImport: (mapping: Mapping) => void;
 }
 
 function loadedMappingText(): string {
-  const mapping = loadMapping()
-  return mapping ? JSON.stringify(mapping, null, 2) : ''
+  const mapping = loadMapping();
+  return mapping ? JSON.stringify(mapping, null, 2) : "";
 }
 
 /**
@@ -27,41 +27,41 @@ function loadedMappingText(): string {
  * successfully imported baseline, so there's never a no-op import.
  */
 export function ImportMapping({ onImport }: ImportMappingProps) {
-  const [text, setText] = useState(loadedMappingText)
-  const [importedText, setImportedText] = useState(text)
-  const [error, setError] = useState<string | null>(null)
+  const [text, setText] = useState(loadedMappingText);
+  const [importedText, setImportedText] = useState(text);
+  const [error, setError] = useState<string | null>(null);
 
   function importRawText(raw: string) {
-    let parsed: unknown
+    let parsed: unknown;
     try {
-      parsed = JSON.parse(raw)
+      parsed = JSON.parse(raw);
     } catch {
-      setError('Could not parse input as JSON.')
-      return
+      setError("Could not parse input as JSON.");
+      return;
     }
 
-    const result = validateMapping(parsed)
+    const result = validateMapping(parsed);
     if (!result.ok) {
-      setError(result.error)
-      return
+      setError(result.error);
+      return;
     }
 
-    saveMapping(result.mapping)
-    setError(null)
-    setImportedText(raw)
-    onImport(result.mapping)
+    saveMapping(result.mapping);
+    setError(null);
+    setImportedText(raw);
+    onImport(result.mapping);
   }
 
   async function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0]
-    event.target.value = '' // allow re-selecting the same file later
-    if (!file) return
+    const file = event.target.files?.[0];
+    event.target.value = ""; // allow re-selecting the same file later
+    if (!file) return;
     // Only load the file's text into the textarea -- importing it is a
     // separate, explicit step (the Import button below).
-    setText(await file.text())
+    setText(await file.text());
   }
 
-  const canImport = text !== importedText
+  const canImport = text !== importedText;
 
   return (
     <div className="flex flex-col gap-2">
@@ -97,5 +97,5 @@ export function ImportMapping({ onImport }: ImportMappingProps) {
         </p>
       )}
     </div>
-  )
+  );
 }

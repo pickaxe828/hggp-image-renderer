@@ -1,5 +1,12 @@
 import { CycleError, UndefinedGlyphError } from "./ir.ts";
-import type { Cell, Glyph, GlyphDefinition, ModelContent, ModuleRhs, Row } from "./ir.ts";
+import type {
+  Cell,
+  Glyph,
+  GlyphDefinition,
+  ModelContent,
+  ModuleRhs,
+  Row,
+} from "./ir.ts";
 import { tokenizeGlyphRow } from "./tokenizer.ts";
 
 // Re-exported from here (rather than just ir.ts) since this is the module
@@ -17,7 +24,7 @@ export type ModuleTable = ReadonlyMap<Glyph, ModuleRhs>;
  * within this block or a prior merge) shadows an earlier one. */
 export function mergeModuleTable(
   base: ModuleTable,
-  definitions: readonly GlyphDefinition[],
+  definitions: readonly GlyphDefinition[]
 ): ModuleTable {
   const table = new Map(base);
   for (const def of definitions) {
@@ -81,11 +88,11 @@ export function resolveElement(
   lookupModel: ModelLookup,
   table: ModuleTable,
   name: string,
-  visited: ReadonlySet<string> = new Set(),
+  visited: ReadonlySet<string> = new Set()
 ): ModelContent | undefined {
   if (visited.has(name)) {
     throw new CycleError(
-      `Cycle detected resolving element /${name}/ (path: ${[...visited, name].join(" -> ")})`,
+      `Cycle detected resolving element /${name}/ (path: ${[...visited, name].join(" -> ")})`
     );
   }
   const content = lookupModel(name);
@@ -101,7 +108,7 @@ function walkForCycles(
   content: ModelContent,
   table: ModuleTable,
   lookupModel: ModelLookup,
-  visited: ReadonlySet<string>,
+  visited: ReadonlySet<string>
 ): void {
   if (content.kind === "slice2d") {
     for (const row of content.rows) {

@@ -13,16 +13,22 @@ describe("resolveWorldY", () => {
       // 5 rows -- asymmetric (not a size that reads the same forwards and
       // backwards): row 0 is the top of the build, so it must land at the
       // *highest* Y, not Y=0.
-      expect(resolveWorldY(0, { kind: "row-in-2d-slice", rowCount: 5 })).toBe(4);
+      expect(resolveWorldY(0, { kind: "row-in-2d-slice", rowCount: 5 })).toBe(
+        4
+      );
     });
 
     it("maps the last text row to Y=0", () => {
-      expect(resolveWorldY(4, { kind: "row-in-2d-slice", rowCount: 5 })).toBe(0);
+      expect(resolveWorldY(4, { kind: "row-in-2d-slice", rowCount: 5 })).toBe(
+        0
+      );
     });
 
     it("maps interior rows in strictly descending Y order", () => {
       const rowCount = 5;
-      const ys = [0, 1, 2, 3, 4].map((row) => resolveWorldY(row, { kind: "row-in-2d-slice", rowCount }));
+      const ys = [0, 1, 2, 3, 4].map((row) =>
+        resolveWorldY(row, { kind: "row-in-2d-slice", rowCount })
+      );
       expect(ys).toEqual([4, 3, 2, 1, 0]);
     });
 
@@ -31,8 +37,12 @@ describe("resolveWorldY", () => {
       // (row index === Y), row 1 would equal 1 instead of the correct 2.
       // A symmetric/odd-centered size could hide this kind of bug; this
       // doesn't.
-      expect(resolveWorldY(1, { kind: "row-in-2d-slice", rowCount: 4 })).toBe(2);
-      expect(resolveWorldY(1, { kind: "row-in-2d-slice", rowCount: 4 })).not.toBe(1);
+      expect(resolveWorldY(1, { kind: "row-in-2d-slice", rowCount: 4 })).toBe(
+        2
+      );
+      expect(
+        resolveWorldY(1, { kind: "row-in-2d-slice", rowCount: 4 })
+      ).not.toBe(1);
     });
   });
 
@@ -45,7 +55,9 @@ describe("resolveWorldY", () => {
       // Asymmetric run of slice indices: 0, 1, 2, 3, 6 -- ascending
       // one-to-one with Y, the opposite direction from a Y-bearing slice's
       // rows. Deliberately not a mirrored/palindromic set of inputs.
-      const ys = [0, 1, 2, 3, 6].map((slice) => resolveWorldY(slice, { kind: "slice-in-stack" }));
+      const ys = [0, 1, 2, 3, 6].map((slice) =>
+        resolveWorldY(slice, { kind: "slice-in-stack" })
+      );
       expect(ys).toEqual([0, 1, 2, 3, 6]);
     });
   });

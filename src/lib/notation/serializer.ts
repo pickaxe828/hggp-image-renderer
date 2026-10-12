@@ -36,7 +36,7 @@ function serializeStatement(statement: Statement): string {
 
 function serializeModuleBlock(definitions: readonly GlyphDefinition[]): string {
   const lines = definitions.map(
-    (def) => `${def.glyph} ::= ${serializeModuleRhs(def.rhs)};`,
+    (def) => `${def.glyph} ::= ${serializeModuleRhs(def.rhs)};`
   );
   return ["---", ...lines, "---"].join("\n");
 }
@@ -58,12 +58,12 @@ function serializeModel(content: ModelContent, indent: string): string {
   const innerIndent = `${indent}  `;
   if (content.kind === "slice2d") {
     const lines = content.rows.map(
-      (row) => `${innerIndent}${serializeRow(row)}`,
+      (row) => `${innerIndent}${serializeRow(row)}`
     );
     return `[[\n${lines.join("\n")}\n${indent}]]`;
   }
   const lines = content.slices.map(
-    (slice) => `${innerIndent}${serializeModel(slice, innerIndent)}`,
+    (slice) => `${innerIndent}${serializeModel(slice, innerIndent)}`
   );
   return `[[\n${lines.join("\n")}\n${indent}]]`;
 }

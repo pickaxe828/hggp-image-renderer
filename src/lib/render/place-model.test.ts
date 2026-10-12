@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { CycleError } from "@/lib/notation";
-import type { ModelContent, ModelLookup, ModuleTable, Row, Slice2D, Stack3D } from "@/lib/notation";
+import type {
+  ModelContent,
+  ModelLookup,
+  ModuleTable,
+  Row,
+  Slice2D,
+  Stack3D,
+} from "@/lib/notation";
 import { placeModelInWorld } from "./place-model.ts";
 
 function word(w: string): { kind: "word"; word: string } {
@@ -43,16 +50,20 @@ describe("placeModelInWorld", () => {
           { word: "mid-right", pos: [1, 1, 0] },
           { word: "bot-left", pos: [0, 0, 0] },
           { word: "bot-right", pos: [1, 0, 0] },
-        ]),
+        ])
       );
       expect(placed).toHaveLength(6);
     });
 
     it("resolves a glyph cell through the module table to a bare word", () => {
-      const table: ModuleTable = new Map([["..", { kind: "word", word: "$air" }]]);
+      const table: ModuleTable = new Map([
+        ["..", { kind: "word", word: "$air" }],
+      ]);
       const model = slice2d([[glyph("..")]]);
 
-      expect(placeModelInWorld(model, table, noElements)).toEqual([{ word: "$air", pos: [0, 0, 0] }]);
+      expect(placeModelInWorld(model, table, noElements)).toEqual([
+        { word: "$air", pos: [0, 0, 0] },
+      ]);
     });
 
     it("expands an extent-sized cell into its tiled sub-region, offset correctly alongside a plain neighbor cell", () => {
@@ -80,15 +91,21 @@ describe("placeModelInWorld", () => {
           // The extent cell is 2 wide, so the plain neighbor starts at
           // x=2, aligned to the row's top (y=1).
           { word: "$solo", pos: [2, 1, 0] },
-        ]),
+        ])
       );
       expect(placed).toHaveLength(5);
     });
 
     it("embeds a referenced element's content at the cell's position", () => {
-      const doorContent = slice2d([[word("$door-top")], [word("$door-bottom")]]);
-      const lookup: ModelLookup = (name) => (name === "door" ? doorContent : undefined);
-      const table: ModuleTable = new Map([["@@", { kind: "element", name: "door" }]]);
+      const doorContent = slice2d([
+        [word("$door-top")],
+        [word("$door-bottom")],
+      ]);
+      const lookup: ModelLookup = (name) =>
+        name === "door" ? doorContent : undefined;
+      const table: ModuleTable = new Map([
+        ["@@", { kind: "element", name: "door" }],
+      ]);
       const model = slice2d([[glyph("@@"), word("$wall")]]);
 
       const placed = placeModelInWorld(model, table, lookup);
@@ -103,14 +120,16 @@ describe("placeModelInWorld", () => {
           { word: "$door-top", pos: [0, 1, 0] },
           { word: "$door-bottom", pos: [0, 0, 0] },
           { word: "$wall", pos: [1, 1, 0] },
-        ]),
+        ])
       );
       expect(placed).toHaveLength(3);
     });
 
     it("throws a clear error for a cell whose glyph is unbound", () => {
       const model = slice2d([[glyph("??")]]);
-      expect(() => placeModelInWorld(model, noGlyphs, noElements)).toThrow(/\?\?/);
+      expect(() => placeModelInWorld(model, noGlyphs, noElements)).toThrow(
+        /\?\?/
+      );
     });
 
     it("degrades a cell referencing an element with no defining model to a placeholder, rather than failing the render", () => {
@@ -118,7 +137,9 @@ describe("placeModelInWorld", () => {
       // lib/notation/modules.ts) -- CLAUDE.md's own reference example
       // relies on this (`@@ ::= /@/`, `/@/` never defined). The whole
       // render must still succeed; only this cell degrades.
-      const table: ModuleTable = new Map([["@@", { kind: "element", name: "ghost" }]]);
+      const table: ModuleTable = new Map([
+        ["@@", { kind: "element", name: "ghost" }],
+      ]);
       const model = slice2d([[glyph("@@"), word("$wall")]]);
 
       const placed = placeModelInWorld(model, table, noElements);
@@ -134,13 +155,16 @@ describe("placeModelInWorld", () => {
       // `/b/`; `/b/`'s content contains a cell for `/a/` again.
       const modelA = slice2d([[glyph("@b")]]);
       const modelB = slice2d([[glyph("@a")]]);
-      const lookup: ModelLookup = (name) => (name === "a" ? modelA : name === "b" ? modelB : undefined);
+      const lookup: ModelLookup = (name) =>
+        name === "a" ? modelA : name === "b" ? modelB : undefined;
       const table: ModuleTable = new Map([
         ["@b", { kind: "element", name: "b" }],
         ["@a", { kind: "element", name: "a" }],
       ]);
 
-      expect(() => placeModelInWorld(modelA, table, lookup, new Set(["a"]))).toThrow(CycleError);
+      expect(() =>
+        placeModelInWorld(modelA, table, lookup, new Set(["a"]))
+      ).toThrow(CycleError);
     });
   });
 
@@ -163,7 +187,7 @@ describe("placeModelInWorld", () => {
           { word: "mid-back", pos: [0, 1, 1] },
           { word: "top-front", pos: [0, 2, 0] },
           { word: "top-back", pos: [0, 2, 1] },
-        ]),
+        ])
       );
       expect(placed).toHaveLength(6);
     });
