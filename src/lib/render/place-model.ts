@@ -19,9 +19,9 @@ import type { PlacedWord } from "./types.ts";
  * Placement happens in two steps, so there is exactly one place where text
  * becomes world:
  *
- * 1. Flatten the model into **text space**: every block gets a (column,
- *    row, slice) position on the page -- column along a row (row-axis), row
- *    down the page (column-axis), slice by nesting order (slice-axis).
+ * 1. Flatten the model into **text space**: every block gets a position
+ *    along each text axis -- along its row (row-axis), down the page
+ *    (column-axis), and by nesting order (slice-axis).
  * 2. Convert text space to world coordinates through the model's direction
  *    spec (its own, or the default for its nesting depth). Nothing else
  *    flips or swaps an axis.
@@ -30,10 +30,10 @@ import type { PlacedWord } from "./types.ts";
  * a bare word (one block), a sized word (an extent -- tiles a uniform
  * sub-region of that same word), or a reference to another named element
  * (embeds that element's own content at this cell's position). All three
- * can size a cell to more than 1x1x1, so layout uses cumulative offsets
- * rather than assuming every cell in a row/column is the same size. A row
- * whose cells have different heights anchors each cell to the row's own top
- * edge.
+ * can size a cell to more than 1 along any text axis, so layout uses
+ * cumulative offsets rather than assuming every cell in a row/column is the
+ * same size. A row whose cells have different lengths along the column-axis
+ * anchors each cell to the row's own first position.
  *
  * An extent stays in world-axis order `<X,Y,Z>`; its footprint on the page
  * is converted through the spec (X on the column-axis makes `<3,2>` 3 rows
@@ -55,18 +55,20 @@ export interface PlacedModel {
   readonly notices: string[];
 }
 
-interface TextBlock {
-  readonly word: string;
-  readonly c: number;
-  readonly r: number;
-  readonly s: number;
+/** A value per text axis: a position (0-based) or a length, depending on
+ * where it is used. */
+interface TextAxes {
+  readonly rowAxis: number;
+  readonly columnAxis: number;
+  readonly sliceAxis: number;
 }
+
+type TextBlock = TextAxes & { readonly word: string };
 
 interface Flattened {
   readonly blocks: readonly TextBlock[];
-  readonly width: number;
-  readonly height: number;
-  readonly depth: number;
+  /** Length of the content along each text axis. */
+  readonly size: TextAxes;
 }
 
 interface FlattenContext {
@@ -87,36 +89,43 @@ type ResolvedCellContent =
 const DEFAULT_2D: DirectionSpec = { x: ">", y: "v", z: "_", t: "_" };
 const DEFAULT_3D: DirectionSpec = { x: ">", y: "v", z: "+", t: "_" };
 
-type TextAxis = "row-axis" | "column-axis" | "slice-axis";
+type TextAxis = keyof TextAxes;
+
+const TEXT_AXIS_LABEL: Record<TextAxis, string> = {
+  rowAxis: "row-axis",
+  columnAxis: "column-axis",
+  sliceAxis: "slice-axis",
+};
 
 const WORLD_AXES = ["x", "y", "z", "t"] as const;
+type WorldAxis = (typeof WORLD_AXES)[number];
 
 function textAxisOf(glyph: DirectionGlyph): TextAxis | undefined {
   switch (glyph) {
     case ">":
     case "<":
-      return "row-axis";
+      return "rowAxis";
     case "v":
     case "^":
-      return "column-axis";
+      return "columnAxis";
     case "+":
     case "-":
-      return "slice-axis";
+      return "sliceAxis";
     case "_":
       return undefined;
   }
 }
 
-/** The world axes (upper-case names) a spec assigns to each text axis. */
-function carriers(spec: DirectionSpec): Record<TextAxis, string[]> {
-  const result: Record<TextAxis, string[]> = {
-    "row-axis": [],
-    "column-axis": [],
-    "slice-axis": [],
+/** The world axes a spec assigns to each text axis. */
+function carriers(spec: DirectionSpec): Record<TextAxis, WorldAxis[]> {
+  const result: Record<TextAxis, WorldAxis[]> = {
+    rowAxis: [],
+    columnAxis: [],
+    sliceAxis: [],
   };
   for (const axis of WORLD_AXES) {
     const textAxis = textAxisOf(spec[axis]);
-    if (textAxis) result[textAxis].push(axis.toUpperCase());
+    if (textAxis) result[textAxis].push(axis);
   }
   return result;
 }
@@ -127,7 +136,7 @@ function validateSpec(spec: DirectionSpec): void {
     const worldAxes = byTextAxis[textAxis];
     if (worldAxes.length > 1) {
       throw new DirectionSpecError(
-        `Direction spec assigns the ${textAxis} to more than one world axis (${worldAxes.join(" and ")}).`
+        `Direction spec assigns the ${TEXT_AXIS_LABEL[textAxis]} to more than one world axis (${worldAxes.map((a) => a.toUpperCase()).join(" and ")}).`
       );
     }
   }
@@ -160,52 +169,44 @@ function danglingElementPlaceholderWord(elementName: string): string {
   return `/${elementName}/ (unresolved element)`;
 }
 
-/** How many columns / rows / slices an extent covers on the page, given
- * which text axis each of X, Y, Z lands on. */
-function extentFootprint(
-  extent: Extent,
-  spec: DirectionSpec
-): { width: number; height: number; depth: number } {
-  const footprint = { width: 1, height: 1, depth: 1 };
+/** How long an extent is along each text axis, given which text axis each
+ * of X, Y, Z lands on. */
+function extentFootprint(extent: Extent, spec: DirectionSpec): TextAxes {
+  const footprint = { rowAxis: 1, columnAxis: 1, sliceAxis: 1 };
   const sizes = { x: extent[0] ?? 1, y: extent[1] ?? 1, z: extent[2] ?? 1 };
   for (const axis of ["x", "y", "z"] as const) {
     const size = sizes[axis];
     const textAxis = textAxisOf(spec[axis]);
-    if (!textAxis) {
-      if (size > 1) {
-        throw new DirectionSpecError(
-          `Extent <${extent.join(",")}> is ${size} long along ${axis.toUpperCase()}, but the direction spec marks ${axis.toUpperCase()} unused.`
-        );
-      }
-    } else if (textAxis === "row-axis") footprint.width = size;
-    else if (textAxis === "column-axis") footprint.height = size;
-    else footprint.depth = size;
+    if (textAxis) {
+      footprint[textAxis] = size;
+    } else if (size > 1) {
+      throw new DirectionSpecError(
+        `Extent <${extent.join(",")}> is ${size} long along ${axis.toUpperCase()}, but the direction spec marks ${axis.toUpperCase()} unused.`
+      );
+    }
   }
   return footprint;
 }
 
-function tile(
-  word: string,
-  width: number,
-  height: number,
-  depth: number
-): Flattened {
+function tile(word: string, size: TextAxes): Flattened {
   const blocks: TextBlock[] = [];
-  for (let s = 0; s < depth; s++)
-    for (let r = 0; r < height; r++)
-      for (let c = 0; c < width; c++) blocks.push({ word, c, r, s });
-  return { blocks, width, height, depth };
+  for (let sliceAxis = 0; sliceAxis < size.sliceAxis; sliceAxis++)
+    for (let columnAxis = 0; columnAxis < size.columnAxis; columnAxis++)
+      for (let rowAxis = 0; rowAxis < size.rowAxis; rowAxis++)
+        blocks.push({ word, rowAxis, columnAxis, sliceAxis });
+  return { blocks, size };
 }
 
-function offsetInto(
-  into: TextBlock[],
-  sub: Flattened,
-  c: number,
-  r: number,
-  s: number
-): void {
+const SINGLE_CELL: TextAxes = { rowAxis: 1, columnAxis: 1, sliceAxis: 1 };
+
+function offsetInto(into: TextBlock[], sub: Flattened, offset: TextAxes): void {
   for (const b of sub.blocks)
-    into.push({ word: b.word, c: c + b.c, r: r + b.r, s: s + b.s });
+    into.push({
+      word: b.word,
+      rowAxis: offset.rowAxis + b.rowAxis,
+      columnAxis: offset.columnAxis + b.columnAxis,
+      sliceAxis: offset.sliceAxis + b.sliceAxis,
+    });
 }
 
 function flattenCell(
@@ -213,10 +214,9 @@ function flattenCell(
   ctx: FlattenContext,
   visited: ReadonlySet<string>
 ): Flattened {
-  if (resolved.kind === "word") return tile(resolved.word, 1, 1, 1);
+  if (resolved.kind === "word") return tile(resolved.word, SINGLE_CELL);
   if (resolved.kind === "sized-word") {
-    const { width, height, depth } = extentFootprint(resolved.extent, ctx.spec);
-    return tile(resolved.word, width, height, depth);
+    return tile(resolved.word, extentFootprint(resolved.extent, ctx.spec));
   }
 
   const content = resolveElement(
@@ -234,7 +234,7 @@ function flattenCell(
     // established "render placeholders, never fail on missing data" policy
     // for unresolved words. The reference example in CLAUDE.md exercises
     // exactly this case (`@@ ::= /@/`, with `/@/` never defined).
-    return tile(danglingElementPlaceholderWord(resolved.name), 1, 1, 1);
+    return tile(danglingElementPlaceholderWord(resolved.name), SINGLE_CELL);
   }
   const nextVisited = new Set(visited);
   nextVisited.add(resolved.name);
@@ -247,12 +247,12 @@ function flattenSlice2D(
   visited: ReadonlySet<string>
 ): Flattened {
   const blocks: TextBlock[] = [];
-  let rOffset = 0;
-  let width = 0;
-  let depth = 1;
+  let columnOffset = 0;
+  let rowAxisLength = 0;
+  let sliceAxisLength = 1;
 
   for (const row of slice.rows) {
-    let cOffset = 0;
+    let rowOffset = 0;
     let rowHeight = 1;
 
     // A raw glyph-run cell can hold more than one grid cell's worth of
@@ -264,17 +264,28 @@ function flattenSlice2D(
         ctx,
         visited
       );
-      offsetInto(blocks, sub, cOffset, rOffset, 0);
-      cOffset += sub.width;
-      rowHeight = Math.max(rowHeight, sub.height);
-      depth = Math.max(depth, sub.depth);
+      offsetInto(blocks, sub, {
+        rowAxis: rowOffset,
+        columnAxis: columnOffset,
+        sliceAxis: 0,
+      });
+      rowOffset += sub.size.rowAxis;
+      rowHeight = Math.max(rowHeight, sub.size.columnAxis);
+      sliceAxisLength = Math.max(sliceAxisLength, sub.size.sliceAxis);
     }
 
-    width = Math.max(width, cOffset);
-    rOffset += rowHeight;
+    rowAxisLength = Math.max(rowAxisLength, rowOffset);
+    columnOffset += rowHeight;
   }
 
-  return { blocks, width, height: rOffset, depth };
+  return {
+    blocks,
+    size: {
+      rowAxis: rowAxisLength,
+      columnAxis: columnOffset,
+      sliceAxis: sliceAxisLength,
+    },
+  };
 }
 
 function flattenStack3D(
@@ -283,9 +294,9 @@ function flattenStack3D(
   visited: ReadonlySet<string>
 ): Flattened {
   const blocks: TextBlock[] = [];
-  let width = 0;
-  let height = 0;
-  let sOffset = 0;
+  let rowAxisLength = 0;
+  let columnAxisLength = 0;
+  let sliceOffset = 0;
 
   for (const slice of stack.slices) {
     if (slice.kind !== "slice2d") {
@@ -294,13 +305,24 @@ function flattenStack3D(
       );
     }
     const sub = flattenSlice2D(slice, ctx, visited);
-    offsetInto(blocks, sub, 0, 0, sOffset);
-    width = Math.max(width, sub.width);
-    height = Math.max(height, sub.height);
-    sOffset += sub.depth;
+    offsetInto(blocks, sub, {
+      rowAxis: 0,
+      columnAxis: 0,
+      sliceAxis: sliceOffset,
+    });
+    rowAxisLength = Math.max(rowAxisLength, sub.size.rowAxis);
+    columnAxisLength = Math.max(columnAxisLength, sub.size.columnAxis);
+    sliceOffset += sub.size.sliceAxis;
   }
 
-  return { blocks, width, height, depth: sOffset };
+  return {
+    blocks,
+    size: {
+      rowAxis: rowAxisLength,
+      columnAxis: columnAxisLength,
+      sliceAxis: sliceOffset,
+    },
+  };
 }
 
 function flattenContent(
@@ -316,58 +338,44 @@ function flattenContent(
 /** A world coordinate for a block, from the glyph that drives that axis. */
 function worldCoordinate(
   glyph: DirectionGlyph,
-  block: TextBlock,
-  size: { width: number; height: number; depth: number }
+  block: TextAxes,
+  size: TextAxes
 ): number {
   switch (glyph) {
     case ">":
-      return block.c;
+      return block.rowAxis;
     case "<":
-      return size.width - 1 - block.c;
+      return size.rowAxis - 1 - block.rowAxis;
     case "v":
-      return size.height - 1 - block.r;
+      return size.columnAxis - 1 - block.columnAxis;
     case "^":
-      return block.r;
+      return block.columnAxis;
     case "+":
-      return block.s;
+      return block.sliceAxis;
     case "-":
-      return size.depth - 1 - block.s;
+      return size.sliceAxis - 1 - block.sliceAxis;
     case "_":
       return 0;
   }
 }
 
 /** How many positions a world axis spans, given the glyph that drives it. */
-function worldSpan(
-  glyph: DirectionGlyph,
-  size: { width: number; height: number; depth: number }
-): number {
-  switch (textAxisOf(glyph)) {
-    case "row-axis":
-      return size.width;
-    case "column-axis":
-      return size.height;
-    case "slice-axis":
-      return size.depth;
-    case undefined:
-      return 1;
-  }
+function worldSpan(glyph: DirectionGlyph, size: TextAxes): number {
+  const textAxis = textAxisOf(glyph);
+  return textAxis ? size[textAxis] : 1;
 }
 
-function requireCarried(
-  spec: DirectionSpec,
-  size: { width: number; height: number; depth: number }
-): void {
+function requireCarried(spec: DirectionSpec, size: TextAxes): void {
   const byTextAxis = carriers(spec);
-  const used: [TextAxis, number, string][] = [
-    ["row-axis", size.width, "columns"],
-    ["column-axis", size.height, "rows"],
-    ["slice-axis", size.depth, "slices"],
-  ];
-  for (const [textAxis, count, noun] of used) {
-    if (count > 1 && byTextAxis[textAxis].length === 0) {
+  const noun: Record<TextAxis, string> = {
+    rowAxis: "cells along a row",
+    columnAxis: "rows",
+    sliceAxis: "slices",
+  };
+  for (const textAxis of Object.keys(byTextAxis) as TextAxis[]) {
+    if (size[textAxis] > 1 && byTextAxis[textAxis].length === 0) {
       throw new DirectionSpecError(
-        `The model has ${count} ${noun}, but the direction spec assigns the ${textAxis} to no world axis.`
+        `The model has ${size[textAxis]} ${noun[textAxis]}, but the direction spec assigns the ${TEXT_AXIS_LABEL[textAxis]} to no world axis.`
       );
     }
   }
@@ -392,11 +400,15 @@ export function placeModelInWorld(
     model.direction ?? (model.kind === "slice2d" ? DEFAULT_2D : DEFAULT_3D);
   validateSpec(spec);
 
-  const flat = flattenContent(model, { table, lookupModel, spec }, visited);
-  requireCarried(spec, flat);
+  const { blocks, size } = flattenContent(
+    model,
+    { table, lookupModel, spec },
+    visited
+  );
+  requireCarried(spec, size);
 
   const notices: string[] = [];
-  const timeSlices = worldSpan(spec.t, flat);
+  const timeSlices = worldSpan(spec.t, size);
   if (timeSlices > 1) {
     notices.push(
       `This model has ${timeSlices} time slices (the T axis); only the first is rendered.`
@@ -404,15 +416,15 @@ export function placeModelInWorld(
   }
 
   const words: PlacedWord[] = [];
-  for (const block of flat.blocks) {
+  for (const block of blocks) {
     // Time is reserved: render time slice 0 only.
-    if (worldCoordinate(spec.t, block, flat) !== 0) continue;
+    if (worldCoordinate(spec.t, block, size) !== 0) continue;
     words.push({
       word: block.word,
       pos: [
-        worldCoordinate(spec.x, block, flat),
-        worldCoordinate(spec.y, block, flat),
-        worldCoordinate(spec.z, block, flat),
+        worldCoordinate(spec.x, block, size),
+        worldCoordinate(spec.y, block, size),
+        worldCoordinate(spec.z, block, size),
       ] as const,
     });
   }

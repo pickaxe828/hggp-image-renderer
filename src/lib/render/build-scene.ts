@@ -28,7 +28,7 @@ export class NoRenderableModelError extends Error {
  * statements define a sized word's model but aren't "a build" on their own,
  * so they're skipped here.
  *
- * WORKING ASSUMPTION, not specified anywhere in CLAUDE.md/issue #1: a
+ * PROVISIONAL DECISION, not specified anywhere in CLAUDE.md/issue #1: a
  * document may contain more than one `identify` statement, and earlier ones
  * are commonly reusable sub-components referenced by glyph (an `ElementRef`
  * module right-hand side) elsewhere in the document rather than builds in

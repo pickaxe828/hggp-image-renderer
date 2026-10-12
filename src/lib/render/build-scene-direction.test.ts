@@ -198,7 +198,7 @@ describe("buildScenes: direction spec on a 3D model", () => {
     });
   });
 
-  it("can stack XZ slices along +Y (<(/>+v/)>), the old behaviour, on request", () => {
+  it("can stack XZ slices along +Y (<(/>+v/)>) on request", () => {
     expect(render(stack("<(/>+v/)>"))).toMatchObject({
       "0,0,1": "a",
       "0,0,0": "d",
