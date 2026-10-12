@@ -196,16 +196,36 @@ A module is a **string-substitution table**: left-hand side is the pattern, righ
 
 ### 2D block models
 
-Delimited by `[[` and `]]`, followed by `:=/<name>/`. Leading indentation is layout, not content. Row width is constant within a model; height varies freely between models (11, 11, and 8 rows in the reference example). Text rows read visually top-to-bottom. How that maps onto world axes depends on the slice plane — see below.
+Delimited by `[[` and `]]`, followed by `:=/<name>/`. Leading indentation is layout, not content. Row width is constant within a model; height varies freely between models (11, 11, and 8 rows in the reference example). Text rows read visually top-to-bottom. How that maps onto world axes is set by the model's **direction spec** — see below.
 
-### Row order vs. Y — WORKING ASSUMPTION
+### Direction spec
 
-Not confirmed against the spec. Implement it behind a single, clearly-named function so it can be flipped in one place when the real rule lands.
+A model may carry a **direction spec**: a `<…>` modifier that maps **world axes** (X, Y, Z, T) to signed **text axes** (row-axis, column-axis, slice-axis). Decided in ADR 0001; terms are defined in `CONTEXT.md`.
 
-- **Slice contains Y (XY or YZ plane):** text rows run **-Y**. The first text row is the highest Y; the last is the bottom of the build. Row index increases as Y decreases.
-- **Slice is XZ (no Y inside the slice):** within-slice rows are Z, and the **stack of slices implicitly advances +Y**. Slice index 0 is the lowest Y.
+```
+[[ … ]]<(/>v/)>:=/C/;     2D default, written out
+[[ … ]]</>v+/>:=/C/;      3D default, parentheses omitted
+```
 
-So Y is descending within a Y-bearing slice, but ascending across a stack of XZ slices. These pull in opposite directions; do not unify them into one flip. Getting either wrong renders builds upside down with no error and a plausible-looking image — the likeliest silent bug in the pipeline.
+- **Placement.** Directly after the closing `]]`, before `:=`. Also valid on the model on the right of `==`. A 3D model carries it on its outermost `]]` only. It modifies that one model: nothing leaks to later models, and nothing is inherited. (Unlike module glyph definitions, which do leak.)
+- **Shape.** `<` `(`? `/` entries `/` `)`? `>`. The parentheses are optional. The entries sit between the slashes.
+- **Entries are positional by world axis: X, Y, Z, T.** Each entry is one glyph. Trailing entries may be left out, and a left-out entry means `_`. A trailing `_` is therefore redundant (`>v+_` ≡ `>v+`).
+- **Glyphs.**
+  - `>` row-axis, value rises to the right (leftmost cell is lowest). `<` falls to the right.
+  - `v` column-axis, value **falls** going down (the top row is highest). `^` rises going down.
+  - `+` slice-axis, value rises with nesting order. `-` falls.
+  - `_` the world axis is unused: size 1, coordinate 0.
+  - The row glyph points at the high end of its axis; the column glyph points at the **low** end. This asymmetry is deliberate — it is what makes the 2D default match the old "top row is highest Y" behaviour. Do not "fix" it.
+- **Defaults when absent.** The default is chosen by the model's nesting depth. 2D: `>v` (X to the right, top row is highest Y). 3D: `>v+` (XY slices stacked along +Z). A short spec does **not** borrow entries from the default: `<(/>/)>` is X only, every row at Y=0.
+- **The slice plane comes from the spec**: it is whichever two world axes the row-axis and column-axis carry. Nothing else declares it. For example, `<(/_v>/)>` is a YZ slice (X unused, Y falls downward, Z rises to the right).
+- **Errors, not guesses.** Report a clear message for: one text axis assigned to two world axes; a text axis the model really uses (several rows, several slices) that no world axis carries; nesting deeper than 2 levels (no text axis exists for depth 3). These are accepted: a slice-axis assignment on a 2D model, and an unused column-axis on a one-row model.
+- **Extents stay in world-axis order `<X,Y,Z>`.** The spec decides how an extent's footprint lands on the page. With X mapped to the column-axis, `[w]<3,2>` is 3 rows tall. Placement must convert footprints through the spec; it must never assume X is the horizontal span.
+- **T (time) is reserved.** Parse it and keep it in the IR so export round-trips it. Render slice 0 only, and show a notice if the model has more than one time slice.
+- **World axes are Minecraft's**: X east, Y up, Z south. No relabelling or mirroring in the renderer; all axis choice lives in the spec.
+- **Export.** The IR remembers whether a spec was present. Re-emit it only if it was, in short form (no parentheses, trailing `_` dropped). Never add one to a model that had none, and never drop an explicit one, even if it equals the default.
+- **Lexing.** `/…/` is also the shape of an element reference, and a raw `/>v+/` looks like one. The spec needs its own lexing path, entered from a `<` that directly follows `]]`.
+
+The old "Row order vs. Y — WORKING ASSUMPTION" is superseded. Its 2D case equals the new 2D default. Its 3D case (XZ slices stacked along +Y) does **not** equal the new 3D default; existing 3D tests and fixtures must change.
 
 ## Implementation constraints
 
@@ -215,10 +235,7 @@ So Y is descending within a Y-bearing slice, but ascending across a stack of XZ 
 
 ## Open questions
 
-Ask the user rather than inventing answers:
-
-- How a model's **slice plane** (XY / YZ / XZ) is actually determined — the working assumption above branches on it, but nothing seen so far shows how the notation declares it. This is the blocker for correct 3D output.
-- Whether the -Y / +Y split above is the intended rule; it is a provisional decision by the user, not spec.
+Ask the user rather than inventing answers. None are open on axis direction: the slice plane and the row/Y rules are settled by the direction spec (see above and ADR 0001). Add new questions here as they come up.
 
 ## Agent skills
 

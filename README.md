@@ -122,6 +122,11 @@ see `CLAUDE.md` for the options.
   with a block (`[...]`) or another language element.
 - `[[ ... ]]` is a **2D block model**, one glyph per cell.
 - `<X,Y,Z>` after a block is an **extent**, the block tiled across that region.
+- `<(/>v/)>` after the closing `]]` of a model is a **direction spec**. It says
+  which way the model's rows, columns and slices run in the world. Without
+  one, a 2D model uses `>v` (X to the right, top row is highest Y) and a 3D
+  model uses `>v+` (XY slices stacked along +Z). It applies to that one model
+  only. See `CONTEXT.md` for the terms and `CLAUDE.md` for the rules.
 
-The notation is only partly specified here; the open questions (such as how a
-model's slice plane is declared) are tracked in `CLAUDE.md`.
+The notation is only partly specified here; the open questions are tracked in
+`CLAUDE.md`.
