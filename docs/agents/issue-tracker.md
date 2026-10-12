@@ -2,10 +2,6 @@
 
 Issues and specs for this repo live as GitHub issues. Use the `gh` CLI for all operations.
 
-> **Note:** this repo has no `git remote` configured yet, so `gh`'s automatic repo
-> inference (see below) won't work until one is added. Add `-R <owner>/<repo>`
-> to `gh` commands in the meantime, or add the remote first.
-
 ## Conventions
 
 - **Create an issue**: `gh issue create --title "..." --body "..."`. Use a heredoc for multi-line bodies.
