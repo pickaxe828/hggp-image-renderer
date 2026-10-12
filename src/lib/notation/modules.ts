@@ -1,17 +1,16 @@
-import { CycleError } from "./ir.ts";
-import type { Glyph, GlyphDefinition, ModelContent, ModuleRhs } from "./ir.ts";
+import { CycleError, UndefinedGlyphError } from "./ir.ts";
+import type { Cell, Glyph, GlyphDefinition, ModelContent, ModuleRhs, Row } from "./ir.ts";
+import { tokenizeGlyphRow } from "./tokenizer.ts";
+
+// Re-exported from here (rather than just ir.ts) since this is the module
+// that owns glyph resolution -- callers reach for it alongside
+// `resolveGlyph`/`resolveRowCells`, not alongside `CycleError`.
+export { UndefinedGlyphError };
 
 /** The running glyph -> rhs substitution table. Definitions from earlier
  * modules stay bound; a later module's definitions shadow earlier ones for
  * the same glyph. */
 export type ModuleTable = ReadonlyMap<Glyph, ModuleRhs>;
-
-export class UndefinedGlyphError extends Error {
-  constructor(glyph: string) {
-    super(`Glyph "${glyph}" is not defined by any module in scope`);
-    this.name = "UndefinedGlyphError";
-  }
-}
 
 /** Merges a module block's definitions into a running table. Definitions
  * are applied in order, so a later definition of the same glyph (whether
@@ -34,6 +33,34 @@ export function resolveGlyph(table: ModuleTable, glyph: Glyph): ModuleRhs {
   const rhs = table.get(glyph);
   if (!rhs) throw new UndefinedGlyphError(glyph);
   return rhs;
+}
+
+/**
+ * Expands a row's raw glyph-run cells into one cell per actual glyph, by
+ * splitting each run's text via longest match against the glyphs currently
+ * bound in `table` (see `tokenizeGlyphRow`). Word cells pass through
+ * unchanged.
+ *
+ * This is a separate pass from parsing, run against a specific scene's
+ * module table, because -- like extent expansion -- it needs information
+ * parsing deliberately doesn't have. Every consumer that walks a `Row`'s
+ * cells (glyph resolution here, block placement in
+ * lib/render/place-model.ts) must go through this first; touching `row`
+ * directly would treat an entire multi-glyph run as if it were one glyph.
+ */
+export function resolveRowCells(row: Row, table: ModuleTable): Cell[] {
+  const definedGlyphs = new Set(table.keys());
+  const cells: Cell[] = [];
+  for (const cell of row) {
+    if (cell.kind === "word") {
+      cells.push(cell);
+      continue;
+    }
+    for (const glyph of tokenizeGlyphRow(cell.text, definedGlyphs)) {
+      cells.push({ kind: "glyph", text: glyph });
+    }
+  }
+  return cells;
 }
 
 /** Looks up the model content that a named language element depicts (via an
@@ -78,9 +105,9 @@ function walkForCycles(
 ): void {
   if (content.kind === "slice2d") {
     for (const row of content.rows) {
-      for (const cell of row) {
+      for (const cell of resolveRowCells(row, table)) {
         if (cell.kind !== "glyph") continue;
-        const rhs = table.get(cell.glyph);
+        const rhs = table.get(cell.text);
         if (rhs && rhs.kind === "element") {
           resolveElement(lookupModel, table, rhs.name, visited);
         }

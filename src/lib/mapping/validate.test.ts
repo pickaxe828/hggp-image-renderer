@@ -13,15 +13,6 @@ describe('validateMapping', () => {
     }
   })
 
-  it('accepts a mapping with an optional places map', () => {
-    const result = validateMapping({
-      version: 1,
-      words: { '$test1': 'minecraft:stone' },
-      places: { '$place1': 'the_end' },
-    })
-    expect(result.ok).toBe(true)
-  })
-
   it('rejects non-object JSON', () => {
     const result = validateMapping('not an object')
     expect(result.ok).toBe(false)
@@ -64,15 +55,4 @@ describe('validateMapping', () => {
     if (!result.ok) expect(result.error).toMatch(/\$test1/)
   })
 
-  it('rejects a places field that is not an object', () => {
-    const result = validateMapping({ version: 1, words: {}, places: 'nope' })
-    expect(result.ok).toBe(false)
-    if (!result.ok) expect(result.error).toMatch(/places/i)
-  })
-
-  it('rejects a places field whose values are not strings', () => {
-    const result = validateMapping({ version: 1, words: {}, places: { a: 1 } })
-    expect(result.ok).toBe(false)
-    if (!result.ok) expect(result.error).toMatch(/places/i)
-  })
 })

@@ -18,7 +18,7 @@ export type {
   Word,
   WordRef,
 } from "./ir.ts";
-export { CycleError } from "./ir.ts";
+export { CycleError, UndefinedGlyphError } from "./ir.ts";
 
 export { tokenizeGlyphRow } from "./tokenizer.ts";
 
@@ -29,7 +29,7 @@ export {
   mergeModuleTable,
   resolveElement,
   resolveGlyph,
-  UndefinedGlyphError,
+  resolveRowCells,
 } from "./modules.ts";
 
 export { parseDocument } from "./parser.ts";

@@ -74,7 +74,7 @@ describe("resolveElement", () => {
     };
     const aContent: ModelContent = {
       kind: "slice2d",
-      rows: [[{ kind: "glyph", glyph: "@@" }]],
+      rows: [[{ kind: "glyph", text: "@@" }]],
     };
     const models = new Map([
       ["@", bContent],
@@ -88,7 +88,7 @@ describe("resolveElement", () => {
     const table = mergeModuleTable(new Map(), [atAtDef]); // @@ ::= /@/
     const selfReferential: ModelContent = {
       kind: "slice2d",
-      rows: [[{ kind: "glyph", glyph: "@@" }]],
+      rows: [[{ kind: "glyph", text: "@@" }]],
     };
     const models = new Map([["@", selfReferential]]);
     const lookup = (name: string) => models.get(name);
@@ -108,7 +108,7 @@ describe("resolveElement", () => {
       slices: [
         {
           kind: "slice2d",
-          rows: [[{ kind: "glyph", glyph: "AA" }]],
+          rows: [[{ kind: "glyph", text: "AA" }]],
         },
       ],
     };

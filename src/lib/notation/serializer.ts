@@ -26,7 +26,9 @@ function serializeStatement(statement: Statement): string {
     case "module":
       return serializeModuleBlock(statement.definitions);
     case "identify":
-      return `${serializeModel(statement.model, "")}:=/${statement.elementName}/;`;
+      return statement.elementName === undefined
+        ? `${serializeModel(statement.model, "")};`
+        : `${serializeModel(statement.model, "")}:=/${statement.elementName}/;`;
     case "equivalence":
       return `${serializeWordRef(statement.word)} == ${serializeModel(statement.model, "")};`;
   }
@@ -71,5 +73,5 @@ function serializeRow(row: Row): string {
 }
 
 function serializeCell(cell: Cell): string {
-  return cell.kind === "glyph" ? cell.glyph : serializeWordRef(cell);
+  return cell.kind === "glyph" ? cell.text : serializeWordRef(cell);
 }

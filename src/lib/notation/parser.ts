@@ -1,4 +1,3 @@
-import { tokenizeGlyphRow } from "./tokenizer.ts";
 import type {
   Cell,
   Document,
@@ -79,14 +78,39 @@ class Parser {
 
   private parseGlyphDefinition(): GlyphDefinition {
     this.skipWs();
-    const glyph = this.readCodePoints(2, "glyph in module definition");
-    this.skipWs();
+    const glyph = this.readGlyphToken();
     this.consumeLiteral("::=");
     this.skipWs();
     const rhs = this.parseModuleRhs();
     this.skipWs();
     this.consumeTerminator();
     return { kind: "definition", glyph, rhs };
+  }
+
+  /** Reads a module definition's glyph: the code points from the current
+   * position up to the next "::=", with exactly one trailing whitespace
+   * code point (the mandatory separator) stripped if present. Any further
+   * trailing whitespace is glyph content -- this is what lets a glyph
+   * legitimately end in a space (e.g. "· ", dot+space) without being
+   * ambiguous with the ordinary case of a glyph directly touching, or
+   * separated by exactly one space from, "::=". The result must be 1 or 2
+   * code points; glyphs are never longer (or shorter) than that. */
+  private readGlyphToken(): string {
+    const eqIdx = this.text.indexOf("::=", this.pos);
+    if (eqIdx === -1) {
+      throw new Error(`Expected "::=" after glyph at position ${this.pos}`);
+    }
+    const codePoints = Array.from(this.text.slice(this.pos, eqIdx));
+    if (codePoints.length > 0 && WHITESPACE.test(codePoints[codePoints.length - 1])) {
+      codePoints.pop();
+    }
+    if (codePoints.length !== 1 && codePoints.length !== 2) {
+      throw new Error(
+        `Glyph must be 1 or 2 characters, got ${JSON.stringify(codePoints.join(""))} at position ${this.pos}`,
+      );
+    }
+    this.pos = eqIdx;
+    return codePoints.join("");
   }
 
   private parseModuleRhs(): ModuleRhs {
@@ -99,8 +123,29 @@ class Parser {
 
   // ---- shared primitives ----
 
+  /** Element ref names are opaque and may themselves contain literal "/"
+   * characters (e.g. naming the compound word ">/C/", written as
+   * `/>/C//`) -- so unlike the other delimiter-bounded constructs, the
+   * closing delimiter here isn't the *next* "/", it's the *last* one
+   * before this statement ends. A statement's terminator is ";", ";;",
+   * or (only at the very end of input) omitted entirely, in which case
+   * the ref instead ends wherever the surrounding construct closes
+   * ("---" for a module, "]]" for a model) or at the end of the
+   * document. Scan up to whichever of those comes first and take the
+   * last "/" in that span as the close. */
   private parseElementRef(): ElementRef {
-    const name = this.scanDelimited("/", "/", "element reference");
+    this.consumeLiteral("/");
+    const candidates = [";", "---", "]]"]
+      .map((token) => this.text.indexOf(token, this.pos))
+      .filter((idx) => idx !== -1);
+    const boundary = candidates.length > 0 ? Math.min(...candidates) : this.text.length;
+    const window = this.text.slice(this.pos, boundary);
+    const closeIdx = window.lastIndexOf("/");
+    if (closeIdx === -1) {
+      throw new Error(`Unterminated element reference (missing closing /) at position ${this.pos}`);
+    }
+    const name = window.slice(0, closeIdx);
+    this.pos += closeIdx + 1;
     return { kind: "element", name };
   }
 
@@ -139,6 +184,13 @@ class Parser {
     this.consumeLiteral("[[");
     const model = this.parseModelContent();
     this.skipWs();
+    // The `:= /name/` suffix is optional -- a model with no name to be
+    // identified by is still a valid, renderable model, just an unnamed
+    // one (see `IdentifyStatement.elementName`).
+    if (!this.peek(":=")) {
+      this.consumeTerminator();
+      return { kind: "identify", model };
+    }
     this.consumeLiteral(":=");
     this.skipWs();
     const element = this.parseElementRef();
@@ -207,7 +259,16 @@ class Parser {
     let end = this.text.length;
     if (nlIdx !== -1) end = Math.min(end, nlIdx);
     if (closeIdx !== -1) end = Math.min(end, closeIdx);
-    const rowText = this.text.slice(this.pos, end).trim();
+    // Leading whitespace is always layout (indentation) and is safe to
+    // drop. Trailing whitespace is layout too when the row is cut short by
+    // the model's own "]]" delimiter -- that boundary is unambiguous.
+    // But when a row ends at a newline, trailing whitespace may be the
+    // second half of a space-containing glyph (e.g. a glyph "· " defined as
+    // dot+space); trimming it there would silently eat real content, so it
+    // is preserved and left for the tokenizer to validate.
+    const endsAtClose = closeIdx !== -1 && end === closeIdx;
+    const raw = this.text.slice(this.pos, end);
+    const rowText = endsAtClose ? raw.trim() : raw.replace(/^\s+/, "");
     this.pos = end;
     return parseRowCells(rowText);
   }
@@ -246,22 +307,6 @@ class Parser {
   private atEnd(): boolean {
     return this.pos >= this.text.length;
   }
-
-  /** Reads exactly `n` Unicode code points starting at `pos`, code-point
-   * safe (never splits a surrogate pair), and advances `pos` past them. */
-  private readCodePoints(n: number, what: string): string {
-    // A generous UTF-16 upper bound (astral code points are at most 2
-    // units each); parseRow / row boundaries ensure we never read across a
-    // line we shouldn't.
-    const window = this.text.slice(this.pos, this.pos + n * 4);
-    const codePoints = Array.from(window).slice(0, n);
-    if (codePoints.length < n) {
-      throw new Error(`Unexpected end of input while reading ${what}`);
-    }
-    const value = codePoints.join("");
-    this.pos += value.length;
-    return value;
-  }
 }
 
 function parseExtentBody(body: string): Extent {
@@ -279,8 +324,12 @@ function parseExtentBody(body: string): Extent {
 }
 
 /** Parses one row's text (already stripped of surrounding indentation) into
- * cells, accepting bracketed words and two-code-point glyphs mixed freely
- * in the same row. */
+ * cells, accepting bracketed words and glyph shorthand mixed freely in the
+ * same row. A maximal run of glyph-shorthand text between (or around)
+ * bracketed words becomes ONE glyph cell holding that whole run, unsplit --
+ * splitting it into individual glyphs needs the module table, which
+ * parsing doesn't have (see `GlyphCell` in ir.ts and `resolveRowCells` in
+ * modules.ts). */
 function parseRowCells(rowText: string): Row {
   const codePoints = Array.from(rowText);
   const cells: Cell[] = [];
@@ -289,10 +338,7 @@ function parseRowCells(rowText: string): Row {
 
   const flushGlyphs = (): void => {
     if (glyphBuffer.length === 0) return;
-    const chunk = glyphBuffer.join("");
-    for (const glyph of tokenizeGlyphRow(chunk)) {
-      cells.push({ kind: "glyph", glyph });
-    }
+    cells.push({ kind: "glyph", text: glyphBuffer.join("") });
     glyphBuffer = [];
   };
 
